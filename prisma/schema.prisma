@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  MEMBER
+}
+
+enum SelectionMode {
+  DRAW
+  MANUAL
+}
+
+enum ChampStatus {
+  SETUP
+  GROUPS
+  KNOCKOUT
+  FINISHED
+}
+
+enum MatchStage {
+  GROUP
+  R32
+  R16
+  QF
+  SF
+  FINAL
+  THIRD_PLACE
+}
+
+enum CardType {
+  YELLOW
+  SECOND_YELLOW
+  DIRECT_RED
+  YELLOW_THEN_RED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  role          UserRole  @default(MEMBER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions     Session[]
+  accounts     Account[]
+  participants ChampionshipParticipant[]
+  ownedTeams   ChampionshipTeam[]
+  createdChamps Championship[] @relation("ChampionshipCreator")
+  homeStandIns Match[] @relation("HomeStandIn")
+  awayStandIns Match[] @relation("AwayStandIn")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Team {
+  id        Int      @id
+  name      String
+  code      String?
+  country   String
+  logoUrl   String
+  syncedAt  DateTime @default(now())
+  championshipTeams ChampionshipTeam[]
+}
+
+model Championship {
+  id            String        @id @default(cuid())
+  name          String
+  season        Int           @default(2026)
+  apiLeagueId   Int           @default(1)
+  selectionMode SelectionMode
+  status        ChampStatus   @default(SETUP)
+  tieBreakSeed  Float?
+  createdById   String
+  createdBy     User          @relation("ChampionshipCreator", fields: [createdById], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  groups       Group[]
+  participants ChampionshipParticipant[]
+  teams        ChampionshipTeam[]
+  matches      Match[]
+}
+
+model Group {
+  id             String   @id @default(cuid())
+  letter         String
+  championshipId String
+  championship   Championship @relation(fields: [championshipId], references: [id], onDelete: Cascade)
+  teams          ChampionshipTeam[]
+  matches        Match[]
+
+  @@unique([championshipId, letter])
+}
+
+model ChampionshipParticipant {
+  id             String       @id @default(cuid())
+  championshipId String
+  userId         String
+  championship   Championship @relation(fields: [championshipId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([championshipId, userId])
+}
+
+model ChampionshipTeam {
+  id             String   @id @default(cuid())
+  championshipId String
+  groupId        String
+  teamId         Int
+  ownerUserId    String?
+  championship   Championship @relation(fields: [championshipId], references: [id], onDelete: Cascade)
+  group          Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  team           Team         @relation(fields: [teamId], references: [id])
+  owner          User?        @relation(fields: [ownerUserId], references: [id])
+
+  @@unique([championshipId, teamId])
+  @@unique([championshipId, groupId, ownerUserId])
+}
+
+model Match {
+  id                String     @id @default(cuid())
+  championshipId    String
+  stage             MatchStage
+  groupId           String?
+  roundNumber       Int?
+  bracketSlot       Int?
+  homeTeamId        Int
+  awayTeamId        Int
+  homeScore         Int?
+  awayScore         Int?
+  homeScorePen      Int?
+  awayScorePen      Int?
+  played            Boolean    @default(false)
+  scheduledAt       DateTime?
+  homeStandInUserId String?
+  awayStandInUserId String?
+  championship      Championship @relation(fields: [championshipId], references: [id], onDelete: Cascade)
+  group             Group?       @relation(fields: [groupId], references: [id])
+  homeStandIn       User?        @relation("HomeStandIn", fields: [homeStandInUserId], references: [id])
+  awayStandIn       User?        @relation("AwayStandIn", fields: [awayStandInUserId], references: [id])
+  events            MatchEvent[]
+
+  @@index([championshipId, stage])
+}
+
+model MatchEvent {
+  id      String   @id @default(cuid())
+  matchId String
+  teamId  Int
+  type    CardType
+  match   Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+}

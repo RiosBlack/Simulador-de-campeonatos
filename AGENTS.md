@@ -1,0 +1,78 @@
+# Campeonato Resenha — AGENTS.md
+
+## Resumo do Projeto
+
+Simulador da Copa do Mundo 2026 onde cada participante recebe seleções (1 por grupo), o admin lança resultados e o sistema atualiza tabelas e mata-mata automaticamente, incluindo regras FIFA de desempate e sorteio quando um usuário enfrentaria a si mesmo.
+
+## Tech Stack
+
+| Camada | Tecnologia |
+|--------|------------|
+| Framework | Next.js 16 (App Router, Server Actions, RSC) |
+| Linguagem | TypeScript |
+| Package Manager | **pnpm** (obrigatório) |
+| ORM / DB | Prisma 7 + Neon Postgres (`@prisma/adapter-pg`) |
+| Auth | Better Auth (email/senha, admin cadastra usuários) |
+| UI | Tailwind CSS v4, GSAP, Recharts, Zustand |
+| API externa | API-Football v3 (`league=1`, `season=2026`) |
+| Validação | Zod |
+
+## Regras de Negócio
+
+1. **1 time por grupo por usuário** — constraint DB + validação em `team-assignment.service.ts`
+2. **Modos de atribuição**: `DRAW` (sorteio) ou `MANUAL` (admin escolhe)
+3. **Mata-mata**: se `home.owner === away.owner`, sorteia `standIn` entre outros participantes
+4. **Classificação**: 12×1º + 12×2º + 8 melhores 3ºs
+5. **Desempate**: pontos → saldo → gols pró → confronto direto → fair play → sorteio
+6. **Fair Play**: amarelo -1, 2º amarelo -3, vermelho direto -4, amarelo+vermelho -5
+
+## Autenticação
+
+- Signup público desabilitado na UI; admin cria via `createUserAction`
+- Roles: `ADMIN` | `MEMBER`
+- Rotas `/admin/*` protegidas por `requireAdmin()` no layout
+- Sessão: Better Auth cookie `better-auth.session_token`
+
+## Estrutura de Pastas
+
+```
+src/
+  app/           # rotas Next.js
+  _lib/          # prisma, auth, api-football, session, rbac
+  _services/     # regras de negócio
+  _actions/      # Server Actions
+  _components/   # UI
+  _stores/       # Zustand
+  _utils/        # helpers
+  generated/prisma/  # Prisma Client (gerado)
+prisma/
+  schema.prisma
+  seed.ts
+```
+
+## ERD (simplificado)
+
+```
+User ──< ChampionshipParticipant >── Championship
+User ──< ChampionshipTeam (owner) >── Group ── Championship
+Team ──< ChampionshipTeam
+Championship ──< Match ──< MatchEvent
+```
+
+## Variáveis de Ambiente
+
+Ver [.env.example](.env.example).
+
+## Comandos
+
+```bash
+pnpm install
+pnpm db:generate
+pnpm db:migrate    # ou db:push
+pnpm db:seed
+pnpm dev
+```
+
+## Changelog
+
+- [2026-05-25-bootstrap](changelogs/2026-05-25-bootstrap.md) — implementação inicial

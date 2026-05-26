@@ -1,0 +1,60 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { requireSession } from "@/_lib/session";
+import { getChampionshipForUser } from "@/_services/championship.service";
+import { calculateGroupStandings } from "@/_services/standings.service";
+import { GroupTable } from "@/_components/championship/GroupTable";
+import { Card } from "@/_components/ui/Card";
+import { PageEntrance } from "@/_components/anim/PageEntrance";
+
+type Props = { params: Promise<{ id: string }> };
+
+export default async function GroupsPage({ params }: Props) {
+  const { id } = await params;
+  const session = await requireSession();
+  const championship = await getChampionshipForUser(id, session.user.id);
+
+  if (!championship) notFound();
+  const groupCount = championship.groups.length;
+  const qualifierText =
+    groupCount === 12
+      ? "12 grupos · 2 primeiros + 8 melhores 3ºs avançam"
+      : "8 grupos · 2 primeiros avançam";
+
+  return (
+    <PageEntrance>
+      <div className="mb-6">
+        <Link
+          href={`/championships/${id}`}
+          className="text-sm text-muted hover:text-accent"
+        >
+          ← Copa
+        </Link>
+        <h1 className="mt-2 text-2xl font-bold">Fase de Grupos</h1>
+        <p className="text-sm text-muted">{qualifierText}</p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {championship.groups.map((group) => {
+          const standings = calculateGroupStandings(
+            group.teams.map((t) => ({
+              teamId: t.teamId,
+              teamName: t.team.name,
+              logoUrl: t.team.logoUrl,
+              ownerUserId: t.ownerUserId,
+              ownerName: t.owner?.name ?? null,
+            })),
+            group.matches,
+            championship.tieBreakSeed ?? Math.random(),
+          );
+
+          return (
+            <Card key={group.id}>
+              <GroupTable letter={group.letter} rows={standings} />
+            </Card>
+          );
+        })}
+      </div>
+    </PageEntrance>
+  );
+}
