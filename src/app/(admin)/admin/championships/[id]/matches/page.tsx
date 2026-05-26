@@ -14,7 +14,7 @@ import { Badge } from "@/_components/ui/Badge";
 
 type Props = { params: Promise<{ id: string }> };
 
-type TeamInfo = { name: string; logoUrl: string };
+type TeamInfo = { name: string; logoUrl: string; ownerName?: string | null };
 
 type MatchRow = {
   id: string;
@@ -67,8 +67,28 @@ export default async function AdminMatchesPage({ params }: Props) {
       championship.matches.flatMap((m) => [m.homeTeamId, m.awayTeamId]),
     ),
   ];
-  const teams = await prisma.team.findMany({ where: { id: { in: teamIds } } });
-  const teamById = Object.fromEntries(teams.map((t) => [t.id, t]));
+  const [teams, championshipTeams] = await Promise.all([
+    prisma.team.findMany({ where: { id: { in: teamIds } } }),
+    prisma.championshipTeam.findMany({
+      where: { championshipId: id, teamId: { in: teamIds } },
+      include: { owner: true },
+    }),
+  ]);
+
+  const ownerNameByTeamId = new Map(
+    championshipTeams.map((ct) => [ct.teamId, ct.owner?.name ?? null]),
+  );
+
+  const teamById: Record<number, TeamInfo> = Object.fromEntries(
+    teams.map((t) => [
+      t.id,
+      {
+        name: t.name,
+        logoUrl: t.logoUrl,
+        ownerName: ownerNameByTeamId.get(t.id) ?? null,
+      },
+    ]),
+  );
 
   const conflictOwnerIds = [
     ...new Set(
@@ -328,7 +348,12 @@ function TeamSide({
           ?
         </span>
       )}
-      <span className="truncate text-sm font-medium">{team?.name ?? "?"}</span>
+      <div>
+        <span className="truncate text-sm font-medium">{team?.name ?? "?"}</span>
+        {team?.ownerName && (
+          <p className="truncate text-xs text-muted">{team.ownerName}</p>
+        )}
+      </div>
     </div>
   );
 }
