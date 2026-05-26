@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const publicPaths = ["/login", "/api/auth"];
+const publicPaths = ["/", "/login", "/championships", "/api/auth"];
+const protectedPaths = ["/profile", "/admin"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -18,7 +19,9 @@ export async function middleware(request: NextRequest) {
     request.cookies.get("better-auth.session_token") ??
     request.cookies.get("__Secure-better-auth.session_token");
 
-  if (!sessionCookie?.value) {
+  const needsAuth = protectedPaths.some((p) => pathname.startsWith(p));
+
+  if (!sessionCookie?.value && needsAuth) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);

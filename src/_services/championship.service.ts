@@ -50,6 +50,62 @@ export async function startGroupPhase(championshipId: string) {
   });
 }
 
+const championshipDetailInclude = {
+  groups: {
+    orderBy: { letter: "asc" as const },
+    include: {
+      teams: { include: { team: true, owner: true } },
+      matches: {
+        include: { events: true },
+        orderBy: { roundNumber: "asc" as const },
+      },
+    },
+  },
+  participants: { include: { user: true } },
+  matches: {
+    orderBy: [{ stage: "asc" as const }, { bracketSlot: "asc" as const }],
+  },
+};
+
+export async function listPublicChampionships() {
+  return prisma.championship.findMany({
+    where: { status: { not: "SETUP" } },
+    orderBy: { createdAt: "desc" },
+    include: {
+      _count: { select: { participants: true, matches: true } },
+    },
+  });
+}
+
+export async function getPublicChampionship(championshipId: string) {
+  return prisma.championship.findFirst({
+    where: {
+      id: championshipId,
+      status: { not: "SETUP" },
+    },
+    include: championshipDetailInclude,
+  });
+}
+
+export async function getChampionshipForView(
+  championshipId: string,
+  userId?: string | null,
+) {
+  if (userId) {
+    const asParticipant = await getChampionshipForUser(championshipId, userId);
+    if (asParticipant) return asParticipant;
+  }
+  return getPublicChampionship(championshipId);
+}
+
+export async function listChampionshipsForHome(userId?: string | null) {
+  if (userId) {
+    const mine = await listChampionshipsForUser(userId);
+    if (mine.length > 0) return mine;
+  }
+  return listPublicChampionships();
+}
+
 export async function getChampionshipForUser(
   championshipId: string,
   userId: string,
@@ -68,22 +124,7 @@ export async function getChampionshipForUser(
 
   return prisma.championship.findUnique({
     where: { id: championshipId },
-    include: {
-      groups: {
-        orderBy: { letter: "asc" },
-        include: {
-          teams: { include: { team: true, owner: true } },
-          matches: {
-            include: { events: true },
-            orderBy: { roundNumber: "asc" },
-          },
-        },
-      },
-      participants: { include: { user: true } },
-      matches: {
-        orderBy: [{ stage: "asc" }, { bracketSlot: "asc" }],
-      },
-    },
+    include: championshipDetailInclude,
   });
 }
 

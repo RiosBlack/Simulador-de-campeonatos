@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireSession } from "@/_lib/session";
-import { getChampionshipForUser } from "@/_services/championship.service";
+import { getSession } from "@/_lib/session";
+import { getChampionshipForView } from "@/_services/championship.service";
 import { calculateGroupStandings } from "@/_services/standings.service";
 import { GroupTable } from "@/_components/championship/GroupTable";
 import { Card } from "@/_components/ui/Card";
@@ -11,8 +11,8 @@ type Props = { params: Promise<{ id: string }> };
 
 export default async function GroupsPage({ params }: Props) {
   const { id } = await params;
-  const session = await requireSession();
-  const championship = await getChampionshipForUser(id, session.user.id);
+  const session = await getSession();
+  const championship = await getChampionshipForView(id, session?.user.id);
 
   if (!championship) notFound();
   const groupCount = championship.groups.length;

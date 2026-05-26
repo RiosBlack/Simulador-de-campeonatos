@@ -26,7 +26,7 @@ export async function requireAdmin() {
     select: { role: true },
   });
   if (user?.role !== "ADMIN") {
-    redirect("/dashboard");
+    redirect("/");
   }
   return { ...session, user: { ...session.user, role: user.role } };
 }

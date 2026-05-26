@@ -30,6 +30,8 @@ Simulador da Copa do Mundo 2026 onde cada participante recebe seleções (1 por 
 
 - Signup público desabilitado na UI; admin cria via `createUserAction`
 - Roles: `ADMIN` | `MEMBER`
+- `/` — home pública (lista copas; visitante abre campeonato e vê jogos/tabelas)
+- `/login` — entrada; `/profile` e `/admin/*` exigem sessão
 - Rotas `/admin/*` protegidas por `requireAdmin()` no layout
 - Sessão: Better Auth cookie `better-auth.session_token`
 
@@ -75,4 +77,5 @@ pnpm dev
 
 ## Changelog
 
+- [2026-05-26-public-home](changelogs/2026-05-26-public-home.md) — home pública e login em `/login`
 - [2026-05-25-bootstrap](changelogs/2026-05-25-bootstrap.md) — implementação inicial

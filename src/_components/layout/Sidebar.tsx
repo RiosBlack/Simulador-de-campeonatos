@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/_utils/cn";
 
 const navItems = [
-  { href: "/dashboard", label: "Início", icon: "🏠" },
-  { href: "/profile", label: "Perfil", icon: "👤" },
+  { href: "/", label: "Início", icon: "🏠" },
+  { href: "/profile", label: "Perfil", icon: "👤", requiresAuth: true },
 ];
 
 const adminItems = [
@@ -17,24 +17,35 @@ const adminItems = [
 
 type SidebarProps = {
   isAdmin?: boolean;
+  isLoggedIn?: boolean;
 };
 
-export function Sidebar({ isAdmin }: SidebarProps) {
+export function Sidebar({ isAdmin, isLoggedIn }: SidebarProps) {
   const pathname = usePathname();
+  const items = navItems.filter((item) => !item.requiresAuth || isLoggedIn);
 
   return (
     <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-border lg:bg-surface/50 lg:backdrop-blur-xl">
-      <div className="flex h-16 items-center gap-2 border-b border-border px-6">
+      <Link
+        href="/"
+        className="flex h-16 items-center gap-2 border-b border-border px-6"
+      >
         <span className="text-2xl">⚽</span>
         <div>
           <p className="text-xs text-muted">Campeonato</p>
           <p className="font-bold text-gradient">Resenha</p>
         </div>
-      </div>
+      </Link>
       <nav className="flex flex-1 flex-col gap-1 p-4">
-        {navItems.map((item) => (
+        {items.map((item) => (
           <NavLink key={item.href} item={item} pathname={pathname} />
         ))}
+        {!isLoggedIn && (
+          <NavLink
+            item={{ href: "/login", label: "Entrar", icon: "🔑" }}
+            pathname={pathname}
+          />
+        )}
         {isAdmin && (
           <>
             <p className="mt-4 px-3 text-xs font-semibold uppercase tracking-wider text-muted">
@@ -57,7 +68,10 @@ function NavLink({
   item: { href: string; label: string; icon: string };
   pathname: string;
 }) {
-  const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+  const active =
+    item.href === "/"
+      ? pathname === "/"
+      : pathname === item.href || pathname.startsWith(`${item.href}/`);
 
   return (
     <Link

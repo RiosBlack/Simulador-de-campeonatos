@@ -27,7 +27,7 @@ function LoginSkeleton() {
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -107,6 +107,12 @@ function LoginForm() {
 
           <p className="text-center text-xs text-muted">
             Acesso somente por convite do administrador.
+          </p>
+
+          <p className="text-center text-sm">
+            <a href="/" className="text-accent hover:underline">
+              Ver copas sem entrar
+            </a>
           </p>
         </Card>
       </PageEntrance>
