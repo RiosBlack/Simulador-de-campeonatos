@@ -1,14 +1,35 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createChampionshipAction } from "@/_actions/admin.actions";
 import { Button } from "@/_components/ui/Button";
 import { Input } from "@/_components/ui/Input";
+import {
+  GroupBuilderStep,
+  type TeamOption,
+} from "@/_components/admin/GroupBuilderStep";
+import { ManualAssignmentTable } from "@/_components/admin/ManualAssignmentTable";
+import {
+  type FormatSize,
+  emptyGroupSlots,
+  groupLettersForFormat,
+} from "@/_utils/championship-groups";
+import {
+  buildManualAssignmentRows,
+  isManualOwnerAssignmentComplete,
+  manualSlotKey,
+} from "@/_utils/manual-assignment";
 
 type UserOption = { id: string; name: string; email: string };
 
-export function CreateChampionshipForm({ users }: { users: UserOption[] }) {
+export function CreateChampionshipForm({
+  users,
+  teams,
+}: {
+  users: UserOption[];
+  teams: TeamOption[];
+}) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [pending, startTransition] = useTransition();
@@ -16,20 +37,75 @@ export function CreateChampionshipForm({ users }: { users: UserOption[] }) {
   const [name, setName] = useState("");
   const [mode, setMode] = useState<"DRAW" | "MANUAL">("DRAW");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [formatSize, setFormatSize] = useState<FormatSize>(32);
+  const [groupSlots, setGroupSlots] = useState(() => emptyGroupSlots(32));
+  const [ownerAssignments, setOwnerAssignments] = useState<
+    Record<string, string>
+  >({});
+
+  const teamsById = useMemo(
+    () =>
+      new Map(
+        teams.map((t) => [t.id, { name: t.name, logoUrl: t.logoUrl }] as const),
+      ),
+    [teams],
+  );
+
+  const selectedParticipants = useMemo(
+    () => users.filter((u) => selected.has(u.id)),
+    [users, selected],
+  );
+
+  const manualRows = useMemo(
+    () => buildManualAssignmentRows(groupSlots, formatSize, teamsById),
+    [groupSlots, formatSize, teamsById],
+  );
+
+  const manualComplete =
+    mode === "MANUAL" &&
+    isManualOwnerAssignmentComplete(groupSlots, formatSize, ownerAssignments);
 
   function toggleUser(id: string) {
     const next = new Set(selected);
     if (next.has(id)) next.delete(id);
     else next.add(id);
     setSelected(next);
+    setOwnerAssignments({});
+  }
+
+  function setOwner(slotId: string, ownerUserId: string) {
+    setOwnerAssignments((prev) => {
+      const next = { ...prev };
+      if (!ownerUserId) delete next[slotId];
+      else next[slotId] = ownerUserId;
+      return next;
+    });
   }
 
   function submit() {
     const formData = new FormData();
     formData.set("name", name);
     formData.set("selectionMode", mode);
+    formData.set("formatSize", String(formatSize));
     for (const id of selected) {
       formData.append("participantIds", id);
+    }
+
+    const letters = groupLettersForFormat(formatSize);
+    for (const letter of letters) {
+      const group = groupSlots[letter] ?? [];
+      for (const teamId of group) {
+        if (teamId !== null) {
+          formData.append("groupAssignments", `${letter}:${teamId}`);
+          const ownerId = ownerAssignments[manualSlotKey(letter, teamId)];
+          if (ownerId) {
+            formData.append(
+              "ownerAssignments",
+              `${letter}:${teamId}:${ownerId}`,
+            );
+          }
+        }
+      }
     }
 
     startTransition(async () => {
@@ -44,10 +120,14 @@ export function CreateChampionshipForm({ users }: { users: UserOption[] }) {
     });
   }
 
+  const canOpenGroupStep = teams.length >= 32;
+  const canSubmit =
+    mode === "DRAW" || (mode === "MANUAL" && manualComplete);
+
   return (
     <div className="space-y-6">
       <div className="flex gap-2">
-        {[1, 2, 3].map((s) => (
+        {[1, 2, 3, 4].map((s) => (
           <div
             key={s}
             className={`h-1 flex-1 rounded-full ${step >= s ? "bg-accent" : "bg-border"}`}
@@ -94,18 +174,41 @@ export function CreateChampionshipForm({ users }: { users: UserOption[] }) {
               Voltar
             </Button>
             <Button
-              onClick={() => selected.size > 0 && setStep(3)}
-              disabled={selected.size === 0}
+              onClick={() => selected.size > 0 && canOpenGroupStep && setStep(3)}
+              disabled={selected.size === 0 || !canOpenGroupStep}
             >
               Próximo
             </Button>
           </div>
+          {!canOpenGroupStep && (
+            <p className="text-sm text-amber-200">
+              Sincronize ao menos 32 seleções antes de montar os grupos.
+            </p>
+          )}
         </div>
       )}
 
       {step === 3 && (
+        <GroupBuilderStep
+          teams={teams}
+          formatSize={formatSize}
+          onFormatSizeChange={(size) => {
+            setFormatSize(size);
+            setOwnerAssignments({});
+          }}
+          slots={groupSlots}
+          onSlotsChange={(slots) => {
+            setGroupSlots(slots);
+            setOwnerAssignments({});
+          }}
+          onBack={() => setStep(2)}
+          onNext={() => setStep(4)}
+        />
+      )}
+
+      {step === 4 && (
         <div className="space-y-4">
-          <h2 className="font-semibold">3. Modo de escolha</h2>
+          <h2 className="font-semibold">4. Modo de escolha</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             <button
               type="button"
@@ -124,15 +227,39 @@ export function CreateChampionshipForm({ users }: { users: UserOption[] }) {
             >
               <p className="font-semibold">Escolha manual</p>
               <p className="text-sm text-muted">
-                Admin atribui cada seleção a um participante
+                Atribua cada seleção a um participante abaixo
               </p>
             </button>
           </div>
+
+          {mode === "MANUAL" && (
+            <div className="space-y-3 border-t border-border pt-4">
+              <div>
+                <h3 className="font-semibold">Atribuir seleções</h3>
+                <p className="text-sm text-muted">
+                  Cada participante pode ter no máximo 1 seleção por grupo.
+                </p>
+              </div>
+              <ManualAssignmentTable
+                rows={manualRows}
+                participants={selectedParticipants}
+                assignments={ownerAssignments}
+                onAssign={setOwner}
+              />
+              {!manualComplete && manualRows.length > 0 && (
+                <p className="text-sm text-amber-200">
+                  Preencha o participante de todas as seleções antes de criar a
+                  copa.
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => setStep(2)}>
+            <Button variant="secondary" onClick={() => setStep(3)}>
               Voltar
             </Button>
-            <Button onClick={submit} disabled={pending}>
+            <Button onClick={submit} disabled={pending || !canSubmit}>
               {pending ? "Criando..." : "Criar copa"}
             </Button>
           </div>

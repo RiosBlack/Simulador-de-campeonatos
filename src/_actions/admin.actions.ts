@@ -7,6 +7,7 @@ import { requireAdmin } from "@/_lib/session";
 import { auth } from "@/_lib/auth";
 import { createChampionship, startGroupPhase } from "@/_services/championship.service";
 import {
+  assignOwnersBulk,
   assignTeamManually,
   runDrawAssignment,
 } from "@/_services/team-assignment.service";
@@ -20,11 +21,107 @@ const createUserSchema = z.object({
   role: z.enum(["ADMIN", "MEMBER"]),
 });
 
-const createChampSchema = z.object({
-  name: z.string().min(3).max(120),
-  selectionMode: z.enum(["DRAW", "MANUAL"]),
-  participantIds: z.array(z.string()).min(1),
+const GROUP_LETTERS_32 = ["A", "B", "C", "D", "E", "F", "G", "H"] as const;
+const GROUP_LETTERS_48 = [
+  ...GROUP_LETTERS_32,
+  "I",
+  "J",
+  "K",
+  "L",
+] as const;
+
+const groupAssignmentEntrySchema = z.object({
+  letter: z.string().length(1),
+  teamId: z.coerce.number().int().positive(),
 });
+
+const createChampSchema = z
+  .object({
+    name: z.string().min(3).max(120),
+    selectionMode: z.enum(["DRAW", "MANUAL"]),
+    participantIds: z.array(z.string()).min(1),
+    formatSize: z.enum(["32", "48"]),
+    groupAssignments: z.array(groupAssignmentEntrySchema),
+  })
+  .superRefine((data, ctx) => {
+    const expectedGroups = data.formatSize === "48" ? 12 : 8;
+    const expectedTeams = data.formatSize === "48" ? 48 : 32;
+    const allowedLetters: readonly string[] =
+      data.formatSize === "48" ? GROUP_LETTERS_48 : GROUP_LETTERS_32;
+    const allowedSet = new Set(allowedLetters);
+
+    if (data.groupAssignments.length !== expectedTeams) {
+      ctx.addIssue({
+        code: "custom",
+        message: `Informe exatamente ${expectedTeams} seleções nos grupos.`,
+        path: ["groupAssignments"],
+      });
+      return;
+    }
+
+    const byLetter = new Map<string, number[]>();
+    for (const entry of data.groupAssignments) {
+      if (!allowedSet.has(entry.letter)) {
+        ctx.addIssue({
+          code: "custom",
+          message: `Grupo inválido: ${entry.letter}`,
+          path: ["groupAssignments"],
+        });
+        return;
+      }
+      const list = byLetter.get(entry.letter) ?? [];
+      list.push(entry.teamId);
+      byLetter.set(entry.letter, list);
+    }
+
+    if (byLetter.size !== expectedGroups) {
+      ctx.addIssue({
+        code: "custom",
+        message: `Todos os ${expectedGroups} grupos devem estar preenchidos.`,
+        path: ["groupAssignments"],
+      });
+      return;
+    }
+
+    for (const letter of allowedLetters) {
+      const ids = byLetter.get(letter);
+      if (!ids || ids.length !== 4) {
+        ctx.addIssue({
+          code: "custom",
+          message: `O grupo ${letter} precisa de exatamente 4 seleções.`,
+          path: ["groupAssignments"],
+        });
+        return;
+      }
+    }
+
+    const uniqueIds = new Set(data.groupAssignments.map((e) => e.teamId));
+    if (uniqueIds.size !== expectedTeams) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Cada seleção só pode aparecer uma vez na copa.",
+        path: ["groupAssignments"],
+      });
+    }
+  });
+
+function parseGroupAssignments(
+  formData: FormData,
+): Array<{ letter: string; teamId: number }> {
+  return formData.getAll("groupAssignments").map((raw) => {
+    const [letter, teamIdStr] = String(raw).split(":");
+    return { letter, teamId: Number(teamIdStr) };
+  });
+}
+
+function parseOwnerAssignments(
+  formData: FormData,
+): Array<{ letter: string; teamId: number; ownerUserId: string }> {
+  return formData.getAll("ownerAssignments").map((raw) => {
+    const [letter, teamIdStr, ownerUserId] = String(raw).split(":");
+    return { letter, teamId: Number(teamIdStr), ownerUserId };
+  });
+}
 
 const matchResultSchema = z.object({
   matchId: z.string(),
@@ -100,37 +197,133 @@ export async function createChampionshipAction(formData: FormData) {
   const session = await requireAdmin();
 
   const participantIds = formData.getAll("participantIds") as string[];
+  const groupAssignments = parseGroupAssignments(formData);
+  const ownerAssignments = parseOwnerAssignments(formData);
   const parsed = createChampSchema.safeParse({
     name: formData.get("name"),
     selectionMode: formData.get("selectionMode"),
     participantIds,
+    formatSize: formData.get("formatSize"),
+    groupAssignments,
   });
 
   if (!parsed.success) {
     return { error: "Dados da copa inválidos." };
   }
 
-  const teams = await prisma.team.findMany({ orderBy: { name: "asc" } });
-  if (teams.length < 32) {
+  const teamCount = await prisma.team.count();
+  if (teamCount < 32) {
     return {
       error:
         "Sincronize pelo menos 32 seleções da API-Football antes de criar a copa.",
     };
   }
 
-  const usableCount = teams.length >= 48 ? 48 : 32;
-  const teamIds = teams.slice(0, usableCount).map((t) => t.id);
+  if (parsed.data.formatSize === "48" && teamCount < 48) {
+    return {
+      error:
+        "Para o formato de 48 seleções, sincronize pelo menos 48 times no catálogo.",
+    };
+  }
 
-  const championship = await createChampionship({
-    name: parsed.data.name,
-    selectionMode: parsed.data.selectionMode,
-    createdById: session.user.id,
-    participantIds: parsed.data.participantIds,
-    teamIds,
+  const submittedIds = [
+    ...new Set(parsed.data.groupAssignments.map((e) => e.teamId)),
+  ];
+  const existingTeams = await prisma.team.findMany({
+    where: { id: { in: submittedIds } },
+    select: { id: true },
   });
+  if (existingTeams.length !== submittedIds.length) {
+    return { error: "Uma ou mais seleções informadas não existem no catálogo." };
+  }
 
-  revalidatePath("/admin/championships");
-  return { success: true, id: championship.id };
+  if (parsed.data.selectionMode === "MANUAL") {
+    const expectedOwners = parsed.data.groupAssignments.length;
+    if (ownerAssignments.length !== expectedOwners) {
+      return {
+        error: "Atribua um participante para cada seleção no modo manual.",
+      };
+    }
+
+    const participantSet = new Set(parsed.data.participantIds);
+    const ownerKeys = new Set<string>();
+    const ownersByGroup = new Map<string, Set<string>>();
+
+    for (const entry of ownerAssignments) {
+      if (!participantSet.has(entry.ownerUserId)) {
+        return { error: "Participante inválido na atribuição manual." };
+      }
+
+      const slotKey = `${entry.letter}:${entry.teamId}`;
+      if (ownerKeys.has(slotKey)) {
+        return { error: "Atribuição duplicada para a mesma seleção." };
+      }
+      ownerKeys.add(slotKey);
+
+      const groupOwners = ownersByGroup.get(entry.letter) ?? new Set();
+      if (groupOwners.has(entry.ownerUserId)) {
+        return {
+          error: `Cada participante só pode ter 1 seleção no grupo ${entry.letter}.`,
+        };
+      }
+      groupOwners.add(entry.ownerUserId);
+      ownersByGroup.set(entry.letter, groupOwners);
+    }
+
+    for (const ga of parsed.data.groupAssignments) {
+      if (!ownerKeys.has(`${ga.letter}:${ga.teamId}`)) {
+        return {
+          error: "Atribua um participante para cada seleção no modo manual.",
+        };
+      }
+    }
+  }
+
+  const byLetter = new Map<string, number[]>();
+  for (const entry of parsed.data.groupAssignments) {
+    const list = byLetter.get(entry.letter) ?? [];
+    list.push(entry.teamId);
+    byLetter.set(entry.letter, list);
+  }
+
+  const groupAssignmentsInput = [...byLetter.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([letter, teamIds]) => ({
+      letter,
+      teamIds: teamIds as [number, number, number, number],
+    }));
+
+  try {
+    const championship = await createChampionship({
+      name: parsed.data.name,
+      selectionMode: parsed.data.selectionMode,
+      createdById: session.user.id,
+      participantIds: parsed.data.participantIds,
+      groupAssignments: groupAssignmentsInput,
+    });
+
+    if (parsed.data.selectionMode === "MANUAL" && ownerAssignments.length > 0) {
+      await assignOwnersBulk(
+        championship.id,
+        ownerAssignments.map((a) => ({
+          groupLetter: a.letter,
+          teamId: a.teamId,
+          ownerUserId: a.ownerUserId,
+        })),
+      );
+    }
+
+    revalidatePath("/admin/championships");
+    revalidatePath(`/admin/championships/${championship.id}/teams`);
+    return { success: true, id: championship.id };
+  } catch (e) {
+    return {
+      error:
+        e instanceof Error
+          ? e.message
+          : "Não foi possível criar a copa. Tente novamente.",
+    };
+  }
 }
 
 export async function runDrawAction(championshipId: string) {

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { runDrawAction, assignTeamAction } from "@/_actions/admin.actions";
 import { Card } from "@/_components/ui/Card";
 import { Button } from "@/_components/ui/Button";
+import { ManualAssignmentTable } from "@/_components/admin/ManualAssignmentTable";
 import type { SelectionMode } from "@/generated/prisma/client";
 
 type TeamRow = {
@@ -34,8 +35,25 @@ export function TeamsAssignmentPanel({
   groups,
   participants,
 }: Props) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
+
+  const manualRows = groups.flatMap((group) =>
+    group.teams.map((ct) => ({
+      slotId: ct.id,
+      groupLetter: group.letter,
+      team: ct.team,
+    })),
+  );
+
+  const assignments = Object.fromEntries(
+    groups.flatMap((g) =>
+      g.teams
+        .filter((t) => t.ownerUserId)
+        .map((t) => [t.id, t.ownerUserId!] as const),
+    ),
+  );
 
   if (selectionMode === "DRAW") {
     return (
@@ -61,50 +79,27 @@ export function TeamsAssignmentPanel({
   }
 
   return (
-    <div className="space-y-6">
-      {groups.map((group) => (
-        <Card key={group.id}>
-          <h3 className="mb-3 font-bold text-accent">Grupo {group.letter}</h3>
-          <div className="space-y-3">
-            {group.teams.map((ct) => (
-              <div
-                key={ct.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/50 p-3"
-              >
-                <div className="flex items-center gap-2">
-                  <Image
-                    src={ct.team.logoUrl}
-                    alt=""
-                    width={28}
-                    height={28}
-                    unoptimized
-                  />
-                  <span className="text-sm font-medium">{ct.team.name}</span>
-                </div>
-                <select
-                  className="rounded-lg border border-border bg-surface px-2 py-1 text-sm"
-                  value={ct.ownerUserId ?? ""}
-                  onChange={(e) => {
-                    const uid = e.target.value;
-                    if (!uid) return;
-                    startTransition(async () => {
-                      const r = await assignTeamAction(ct.id, uid);
-                      setMessage(r.error ?? "Atribuído!");
-                    });
-                  }}
-                >
-                  <option value="">Sem dono</option>
-                  {participants.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ))}
-          </div>
-        </Card>
-      ))}
+    <div className="space-y-4">
+      <p className="text-sm text-muted">
+        Atribua cada seleção a um participante. Cada um só pode ter 1 time por
+        grupo.
+      </p>
+      <ManualAssignmentTable
+        rows={manualRows}
+        participants={participants}
+        assignments={assignments}
+        onAssign={(slotId, ownerUserId) => {
+          if (!ownerUserId) return;
+          startTransition(async () => {
+            const r = await assignTeamAction(slotId, ownerUserId);
+            if (r.error) setMessage(r.error);
+            else {
+              setMessage("Atribuído!");
+              router.refresh();
+            }
+          });
+        }}
+      />
       {message && <p className="text-sm text-accent">{message}</p>}
     </div>
   );

@@ -7,7 +7,11 @@ import { CreateChampionshipForm } from "@/_components/admin/CreateChampionshipFo
 export default async function NewChampionshipPage() {
   await requireAdmin();
   const allUsers = await prisma.user.findMany({ orderBy: { name: "asc" } });
-  const teamCount = await prisma.team.count();
+  const teams = await prisma.team.findMany({
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, code: true, logoUrl: true, country: true },
+  });
+  const teamCount = teams.length;
 
   return (
     <PageEntrance>
@@ -22,14 +26,14 @@ export default async function NewChampionshipPage() {
       {teamCount >= 32 && teamCount < 48 && (
         <Card className="mb-6 border-amber-500/30 bg-amber-900/20">
           <p className="text-sm text-amber-200">
-            Plano atual da API retornou {teamCount} seleções. A copa será criada
-            no formato de 32 equipes (8 grupos). Para 48 equipes, use plano com
-            acesso à temporada 2026.
+            Catálogo com {teamCount} seleções. Você poderá montar grupos no
+            formato de 32 equipes (8 grupos). Para 48 equipes (12 grupos),
+            sincronize mais seleções da API-Football.
           </p>
         </Card>
       )}
       <Card>
-        <CreateChampionshipForm users={allUsers} />
+        <CreateChampionshipForm users={allUsers} teams={teams} />
       </Card>
     </PageEntrance>
   );

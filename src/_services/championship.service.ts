@@ -1,5 +1,8 @@
 import prisma from "@/_lib/prisma";
-import { initializeChampionshipStructure } from "@/_services/team-assignment.service";
+import {
+  initializeChampionshipStructure,
+  type GroupAssignmentInput,
+} from "@/_services/team-assignment.service";
 import type { ChampStatus, SelectionMode } from "@/generated/prisma/client";
 
 export async function createChampionship(input: {
@@ -8,7 +11,7 @@ export async function createChampionship(input: {
   selectionMode: SelectionMode;
   createdById: string;
   participantIds: string[];
-  teamIds: number[];
+  groupAssignments: GroupAssignmentInput[];
 }) {
   const championship = await prisma.championship.create({
     data: {
@@ -23,7 +26,10 @@ export async function createChampionship(input: {
     },
   });
 
-  await initializeChampionshipStructure(championship.id, input.teamIds);
+  await initializeChampionshipStructure(
+    championship.id,
+    input.groupAssignments,
+  );
 
   return prisma.championship.findUniqueOrThrow({
     where: { id: championship.id },
@@ -94,6 +100,12 @@ export async function getChampionshipForView(
   if (userId) {
     const asParticipant = await getChampionshipForUser(championshipId, userId);
     if (asParticipant) return asParticipant;
+
+    const asCreator = await prisma.championship.findFirst({
+      where: { id: championshipId, createdById: userId },
+      include: championshipDetailInclude,
+    });
+    if (asCreator) return asCreator;
   }
   return getPublicChampionship(championshipId);
 }

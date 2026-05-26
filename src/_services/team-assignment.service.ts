@@ -81,6 +81,33 @@ export async function assignTeamManually(
   });
 }
 
+export async function assignOwnersBulk(
+  championshipId: string,
+  assignments: Array<{
+    groupLetter: string;
+    teamId: number;
+    ownerUserId: string;
+  }>,
+) {
+  for (const assignment of assignments) {
+    const ct = await prisma.championshipTeam.findFirst({
+      where: {
+        championshipId,
+        teamId: assignment.teamId,
+        group: { letter: assignment.groupLetter },
+      },
+    });
+
+    if (!ct) {
+      throw new AssignmentError(
+        `Seleção não encontrada no grupo ${assignment.groupLetter}.`,
+      );
+    }
+
+    await assignTeamManually(ct.id, assignment.ownerUserId);
+  }
+}
+
 export async function runDrawAssignment(championshipId: string) {
   const championship = await prisma.championship.findUniqueOrThrow({
     where: { id: championshipId },
@@ -142,24 +169,44 @@ export async function runDrawAssignment(championshipId: string) {
   });
 }
 
+export type GroupAssignmentInput = {
+  letter: string;
+  teamIds: [number, number, number, number];
+};
+
 export async function initializeChampionshipStructure(
   championshipId: string,
-  teamIds: number[],
+  groupAssignments: GroupAssignmentInput[],
 ) {
-  if (![32, 48].includes(teamIds.length)) {
+  const teamCount = groupAssignments.length * 4;
+  if (![32, 48].includes(teamCount)) {
     throw new AssignmentError(
       "É necessário ter 32 ou 48 seleções para montar os grupos.",
     );
   }
 
-  const groupCount = teamIds.length / 4;
-  const letters = "ABCDEFGHIJKL".split("").slice(0, groupCount);
-  const shuffled = shuffle(teamIds);
-  const groups = letters.map((letter) => ({
+  if (![8, 12].includes(groupAssignments.length)) {
+    throw new AssignmentError("Quantidade de grupos inválida.");
+  }
+
+  const allTeamIds = groupAssignments.flatMap((g) => g.teamIds);
+  if (new Set(allTeamIds).size !== allTeamIds.length) {
+    throw new AssignmentError("Cada seleção só pode aparecer uma vez na copa.");
+  }
+
+  const sorted = [...groupAssignments].sort((a, b) =>
+    a.letter.localeCompare(b.letter),
+  );
+
+  const groups = sorted.map((g) => ({
     id: crypto.randomUUID(),
     championshipId,
-    letter,
+    letter: g.letter,
   }));
+
+  const letterToGroupId = new Map(
+    sorted.map((g, i) => [g.letter, groups[i]!.id] as const),
+  );
 
   const championshipTeams: Array<{
     championshipId: string;
@@ -167,13 +214,13 @@ export async function initializeChampionshipStructure(
     teamId: number;
   }> = [];
 
-  let index = 0;
-  for (const group of groups) {
-    for (let i = 0; i < 4; i++) {
+  for (const assignment of sorted) {
+    const groupId = letterToGroupId.get(assignment.letter)!;
+    for (const teamId of assignment.teamIds) {
       championshipTeams.push({
         championshipId,
-        groupId: group.id,
-        teamId: shuffled[index++]!,
+        groupId,
+        teamId,
       });
     }
   }

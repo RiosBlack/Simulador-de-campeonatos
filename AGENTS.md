@@ -77,5 +77,6 @@ pnpm dev
 
 ## Changelog
 
+- [2026-05-26-championship-group-selection](changelogs/2026-05-26-championship-group-selection.md) — admin monta grupos e seleções ao criar copa
 - [2026-05-26-public-home](changelogs/2026-05-26-public-home.md) — home pública e login em `/login`
 - [2026-05-25-bootstrap](changelogs/2026-05-25-bootstrap.md) — implementação inicial

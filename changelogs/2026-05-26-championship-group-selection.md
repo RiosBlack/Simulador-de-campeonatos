@@ -1,0 +1,29 @@
+# 2026-05-26 — Seleção manual de grupos na criação da copa
+
+## Mudanças
+
+- Wizard de nova copa ganhou passo **Grupos e seleções** (4 passos no total).
+- Admin escolhe formato **32** (8 grupos) ou **48** (12 grupos) e atribui 4 seleções por grupo.
+- Removido sorteio automático de seleções na criação (primeiras N por nome + `shuffle`).
+- Validação Zod e server action garantem grupos completos, letras válidas e IDs únicos no catálogo.
+- Utilitários em `src/_utils/championship-groups.ts` para letras, slots e validação no client.
+
+## Atribuição manual no wizard
+
+- No passo 4, ao escolher **Escolha manual**, a tabela de grupos/seleções/participantes aparece logo abaixo.
+- Botão **Criar copa** só habilita quando todas as seleções tiverem dono (regra 1 por grupo).
+- Atribuições são salvas na criação via `assignOwnersBulk`.
+
+## Correções (404)
+
+- `/admin/championships/[id]` redireciona para `/admin/championships/[id]/teams` (rota índice inexistente gerava 404).
+- Criador da copa pode visualizar campeonato em `SETUP` em `/championships/[id]`.
+- Erros ao criar copa retornam mensagem na UI em vez de falha silenciosa.
+
+## Arquivos principais
+
+- `src/app/(admin)/admin/championships/new/page.tsx` — carrega catálogo `Team`
+- `src/_components/admin/GroupBuilderStep.tsx` — UI de montagem dos grupos
+- `src/_components/admin/CreateChampionshipForm.tsx` — wizard com 4 passos
+- `src/_actions/admin.actions.ts` — `groupAssignments` no `createChampionshipAction`
+- `src/_services/team-assignment.service.ts` — `initializeChampionshipStructure` com assignments explícitos
