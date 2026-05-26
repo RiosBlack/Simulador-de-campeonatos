@@ -77,6 +77,7 @@ pnpm dev
 
 ## Changelog
 
+- [2026-05-26-hydration-html-suppress](changelogs/2026-05-26-hydration-html-suppress.md) — `suppressHydrationWarning` no layout raiz (extensões do navegador)
 - [2026-05-26-world-cup-2026-official-teams](changelogs/2026-05-26-world-cup-2026-official-teams.md) — catálogo fixo com as 48 seleções oficiais da Copa 2026
 - [2026-05-26-team-names-pt-br-logos](changelogs/2026-05-26-team-names-pt-br-logos.md) — nomes das seleções em PT-BR; logos corrigidos (Argélia, Chile, Panamá)
 - [2026-05-26-knockout-standin-choice](changelogs/2026-05-26-knockout-standin-choice.md) — dono escolhe seleção no conflito; stand-in no outro time
