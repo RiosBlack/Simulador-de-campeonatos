@@ -136,6 +136,7 @@ export default async function KnockoutPage({ params }: Props) {
 
     return {
       id: m.id,
+      bracketSlot: m.bracketSlot,
       stage: m.stage,
       homeName: home?.name ?? "?",
       awayName: away?.name ?? "?",
@@ -149,8 +150,81 @@ export default async function KnockoutPage({ params }: Props) {
       homeScore: m.homeScore,
       awayScore: m.awayScore,
       played: m.played,
+      isPlaceholder: false,
     };
   });
+
+  // Completa visualmente a chave até a final com jogos futuros (placeholders).
+  const stagesOrder = hasR32
+    ? (["R32", "R16", "QF", "SF", "FINAL"] as const)
+    : (["R16", "QF", "SF", "FINAL"] as const);
+
+  const slotsPerStage: Record<string, number> = hasR32
+    ? { R32: 16, R16: 8, QF: 4, SF: 2, FINAL: 1 }
+    : { R16: 8, QF: 4, SF: 2, FINAL: 1 };
+
+  const matchByStageSlot = new Map<string, (typeof bracketMatches)[number]>();
+  for (const m of bracketMatches) {
+    if (m.bracketSlot == null) continue;
+    matchByStageSlot.set(`${m.stage}-${m.bracketSlot}`, m);
+  }
+
+  // Para cada slot, guarda o label do confronto (apenas "TimeA / TimeB", sem prefixo "Venc.").
+  // Jogos reais usam os nomes dos times; placeholders geram a partir dos feeders da fase anterior.
+  // Assim "Venc." só é prefixado uma vez, sem cascata.
+  const matchLabelBySlot = new Map<string, string>();
+  for (const m of bracketMatches) {
+    if (m.bracketSlot == null || m.isPlaceholder) continue;
+    matchLabelBySlot.set(`${m.stage}-${m.bracketSlot}`, `${m.homeName} / ${m.awayName}`);
+  }
+
+  for (let i = 0; i < stagesOrder.length; i++) {
+    const stage = stagesOrder[i]!;
+    const count = slotsPerStage[stage];
+
+    for (let slot = 0; slot < count; slot++) {
+      const key = `${stage}-${slot}`;
+      if (matchByStageSlot.has(key)) continue;
+
+      let homeName = "A definir";
+      let awayName = "A definir";
+
+      const prevStage = stagesOrder[i - 1];
+      if (prevStage) {
+        const slotA = slot * 2;
+        const slotB = slot * 2 + 1;
+        const labelA = matchLabelBySlot.get(`${prevStage}-${slotA}`);
+        const labelB = matchLabelBySlot.get(`${prevStage}-${slotB}`);
+        if (labelA) homeName = `Venc. ${labelA}`;
+        if (labelB) awayName = `Venc. ${labelB}`;
+      }
+
+      // Registra o label deste placeholder (sem "Venc." para não cascatear)
+      matchLabelBySlot.set(`${stage}-${slot}`, `${homeName} / ${awayName}`);
+
+      const placeholder = {
+        id: `placeholder-${stage}-${slot}`,
+        bracketSlot: slot,
+        stage,
+        homeName,
+        awayName,
+        homeLogo: "",
+        awayLogo: "",
+        homeParticipant: null,
+        homeParticipantIsStandIn: false,
+        awayParticipant: null,
+        awayParticipantIsStandIn: false,
+        conflictPending: false,
+        homeScore: null,
+        awayScore: null,
+        played: false,
+        isPlaceholder: true,
+      } as (typeof bracketMatches)[number];
+
+      bracketMatches.push(placeholder);
+      matchByStageSlot.set(key, placeholder);
+    }
+  }
 
   return (
     <PageEntrance>

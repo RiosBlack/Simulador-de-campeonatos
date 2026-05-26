@@ -8,6 +8,7 @@ import { stageLabel } from "@/_utils/format";
 
 export type BracketMatch = {
   id: string;
+  bracketSlot?: number | null;
   stage: string;
   homeName: string;
   awayName: string;
@@ -21,6 +22,8 @@ export type BracketMatch = {
   awayParticipant?: string | null;
   awayParticipantIsStandIn?: boolean;
   conflictPending?: boolean;
+  // Placeholders (jogos futuros) não têm times definidos ainda
+  isPlaceholder?: boolean;
 };
 
 type BracketTreeProps = {
@@ -72,7 +75,10 @@ export function BracketTree({ matches }: BracketTreeProps) {
             <h3 className="text-center text-xs font-bold uppercase tracking-wider text-accent">
               {stageLabel(stage)}
             </h3>
-            {stageMatches.map((match) => (
+            {stageMatches
+              .slice()
+              .sort((a, b) => (a.bracketSlot ?? 0) - (b.bracketSlot ?? 0))
+              .map((match) => (
               <Card key={match.id} className="bracket-match p-3">
                 {match.conflictPending && (
                   <p className="mb-2 text-center text-xs font-medium text-amber-200/90">
@@ -127,7 +133,13 @@ function MatchRow({
   return (
     <div className="flex items-center justify-between gap-2">
       <div className="flex items-center gap-2">
-        <Image src={logo} alt="" width={24} height={24} unoptimized />
+        {logo ? (
+          <Image src={logo} alt="" width={24} height={24} unoptimized />
+        ) : (
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-border text-[10px] text-muted">
+            ?
+          </span>
+        )}
         <div>
           <p className="text-sm font-medium">{name}</p>
           {conflictPending ? (
