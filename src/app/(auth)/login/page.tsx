@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { authClient } from "@/_lib/auth-client";
+import { getAuthClient } from "@/_lib/auth-client";
 import { Button } from "@/_components/ui/Button";
 import { Input } from "@/_components/ui/Input";
 import { Card } from "@/_components/ui/Card";
@@ -39,20 +39,26 @@ function LoginForm() {
     setError("");
     setLoading(true);
 
-    const { error: signInError } = await authClient.signIn.email({
-      email,
-      password,
-    });
+    try {
+      const { error: signInError } = await getAuthClient().signIn.email({
+        email,
+        password,
+      });
 
-    setLoading(false);
+      if (signInError) {
+        setError("Credenciais inválidas. Tente novamente.");
+        return;
+      }
 
-    if (signInError) {
-      setError("Credenciais inválidas. Tente novamente.");
-      return;
+      router.push(callbackUrl);
+      router.refresh();
+    } catch {
+      setError(
+        "Não foi possível conectar ao servidor. Use o mesmo endereço do site (localhost ou 127.0.0.1) e reinicie o `pnpm dev`.",
+      );
+    } finally {
+      setLoading(false);
     }
-
-    router.push(callbackUrl);
-    router.refresh();
   }
 
   return (

@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const publicPaths = ["/", "/login", "/championships", "/api/auth"];
 const protectedPaths = ["/profile", "/admin"];
+
+function isPublicPath(pathname: string) {
+  if (pathname === "/") return true;
+  if (pathname.startsWith("/login")) return true;
+  if (pathname.startsWith("/championships")) return true;
+  if (pathname.startsWith("/api/auth")) return true;
+  return false;
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (
-    publicPaths.some((p) => pathname.startsWith(p)) ||
+    isPublicPath(pathname) ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/uploads") ||
     pathname === "/favicon.ico"

@@ -9,6 +9,16 @@
 - Middleware protege apenas `/profile` e `/admin`; demais rotas de leitura são públicas.
 - Novos helpers em `championship.service.ts`: `listPublicChampionships`, `getPublicChampionship`, `getChampionshipForView`, `listChampionshipsForHome`.
 
+## Dev na porta 3005
+
+- `pnpm dev` usa `next dev -p 3005`; `.env` / `.env.example` com URLs em `localhost:3005`.
+
+## Correção login (mesmo dia)
+
+- `authClient` usa `window.location.origin` (evita `Failed to fetch` entre `localhost` / `127.0.0.1` ou portas diferentes).
+- `auth.ts` com `secret`, `baseURL` e `trustedOrigins`.
+- Middleware: `/` não marca mais todas as rotas como públicas.
+
 ## Arquivos principais
 
 - `src/app/(app)/page.tsx` — home
