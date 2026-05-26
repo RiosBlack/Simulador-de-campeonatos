@@ -26,7 +26,10 @@ export default async function AppLayout({
           <AppTopBar />
           {children}
         </main>
-        <BottomNav isLoggedIn={Boolean(session?.user)} />
+        <BottomNav
+          isLoggedIn={Boolean(session?.user)}
+          isAdmin={isAdmin}
+        />
       </div>
     </div>
   );

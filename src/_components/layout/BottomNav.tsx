@@ -8,25 +8,28 @@ type NavItem = {
   href: string;
   label: string;
   icon: string;
-  live?: boolean;
   guestOnly?: boolean;
   requiresAuth?: boolean;
+  adminOnly?: boolean;
 };
 
-const items = [
+const items: NavItem[] = [
   { href: "/", label: "Home", icon: "🏠" },
   { href: "/login", label: "Entrar", icon: "🔑", guestOnly: true },
+  { href: "/admin", label: "Admin", icon: "⚙️", requiresAuth: true, adminOnly: true },
   { href: "/profile", label: "Perfil", icon: "👤", requiresAuth: true },
 ];
 
 type BottomNavProps = {
   isLoggedIn?: boolean;
+  isAdmin?: boolean;
 };
 
-export function BottomNav({ isLoggedIn }: BottomNavProps) {
+export function BottomNav({ isLoggedIn, isAdmin }: BottomNavProps) {
   const pathname = usePathname();
-  const visibleItems = (items as NavItem[]).filter((item) => {
+  const visibleItems = items.filter((item) => {
     if (item.guestOnly) return !isLoggedIn;
+    if (item.adminOnly) return isLoggedIn && isAdmin;
     if (item.requiresAuth) return isLoggedIn;
     return true;
   });
