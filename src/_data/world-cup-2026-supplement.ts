@@ -2,7 +2,8 @@ import type { ApiFootballTeam } from "@/_lib/api-football";
 
 /**
  * Seleções extras para completar 48 quando a API só retorna a lista da Copa de 2022 (32).
- * IDs oficiais API-Football (seleções nacionais). Usado apenas se league=1 não trouxer 48.
+ * IDs oficiais API-Football (seleções nacionais, national=true).
+ * Validar via GET /teams?country={Country} antes de adicionar novos itens.
  */
 export const WORLD_CUP_2026_SUPPLEMENT_TEAMS: ApiFootballTeam[] = [
   {
@@ -62,18 +63,18 @@ export const WORLD_CUP_2026_SUPPLEMENT_TEAMS: ApiFootballTeam[] = [
     logoUrl: "https://media.api-sports.io/football/teams/19.png",
   },
   {
-    id: 483,
+    id: 1532,
     name: "Algeria",
     code: "ALG",
     country: "Algeria",
-    logoUrl: "https://media.api-sports.io/football/teams/483.png",
+    logoUrl: "https://media.api-sports.io/football/teams/1532.png",
   },
   {
-    id: 837,
+    id: 2383,
     name: "Chile",
     code: "CHI",
     country: "Chile",
-    logoUrl: "https://media.api-sports.io/football/teams/837.png",
+    logoUrl: "https://media.api-sports.io/football/teams/2383.png",
   },
   {
     id: 2379,
@@ -90,11 +91,11 @@ export const WORLD_CUP_2026_SUPPLEMENT_TEAMS: ApiFootballTeam[] = [
     logoUrl: "https://media.api-sports.io/football/teams/2339.png",
   },
   {
-    id: 2346,
+    id: 11,
     name: "Panama",
     code: "PAN",
     country: "Panama",
-    logoUrl: "https://media.api-sports.io/football/teams/2346.png",
+    logoUrl: "https://media.api-sports.io/football/teams/11.png",
   },
   {
     id: 1533,

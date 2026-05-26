@@ -15,7 +15,10 @@ import {
   assertMatchReadyForResult,
   checkAndAdvanceAfterMatch,
 } from "@/_services/knockout.service";
-import { upsertTeamsCatalog } from "@/_services/team-catalog.service";
+import {
+  remapIncorrectTeamIds,
+  upsertTeamsCatalog,
+} from "@/_services/team-catalog.service";
 import type { CardType } from "@/generated/prisma/client";
 
 const createUserSchema = z.object({
@@ -487,6 +490,7 @@ export async function syncTeamsAction() {
   const result = await fetchWorldCupTeams(2026, 1);
 
   await upsertTeamsCatalog(result.teams);
+  await remapIncorrectTeamIds();
 
   revalidatePath("/admin/championships");
   revalidatePath("/admin/championships/new");

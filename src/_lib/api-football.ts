@@ -1,4 +1,5 @@
 import { WORLD_CUP_2026_SUPPLEMENT_TEAMS } from "@/_data/world-cup-2026-supplement";
+import { localizeApiFootballTeams } from "@/_utils/team-display";
 
 const BASE =
   process.env.API_FOOTBALL_BASE ?? "https://v3.football.api-sports.io";
@@ -43,13 +44,15 @@ function getHeaders(): HeadersInit {
 function mapTeamResponse(
   data: ApiFootballTeamsResponse,
 ): ApiFootballTeam[] {
-  return data.response.map((item) => ({
-    id: item.team.id,
-    name: item.team.name,
-    code: item.team.code,
-    country: item.team.country,
-    logoUrl: item.team.logo,
-  }));
+  return localizeApiFootballTeams(
+    data.response.map((item) => ({
+      id: item.team.id,
+      name: item.team.name,
+      code: item.team.code,
+      country: item.team.country,
+      logoUrl: item.team.logo,
+    })),
+  );
 }
 
 async function fetchTeamsForSeason(
@@ -103,7 +106,9 @@ function supplementTo48(teams: ApiFootballTeam[]): {
     return { teams: teams.slice(0, 48), supplemented: false };
   }
 
-  const merged = mergeTeams(teams, WORLD_CUP_2026_SUPPLEMENT_TEAMS).slice(0, 48);
+  const merged = localizeApiFootballTeams(
+    mergeTeams(teams, WORLD_CUP_2026_SUPPLEMENT_TEAMS),
+  ).slice(0, 48);
   const supplemented = merged.length > teams.length;
 
   if (merged.length < 48) {
