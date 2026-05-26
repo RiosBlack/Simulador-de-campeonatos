@@ -1,18 +1,14 @@
 import { NextResponse } from "next/server";
 import { fetchWorldCupTeams } from "@/_lib/api-football";
 import { requireAdmin } from "@/_lib/session";
-import {
-  remapIncorrectTeamIds,
-  upsertTeamsCatalog,
-} from "@/_services/team-catalog.service";
+import { syncWorldCupTeamsCatalog } from "@/_services/team-catalog.service";
 
 export async function POST() {
   try {
     await requireAdmin();
     const result = await fetchWorldCupTeams(2026, 1);
 
-    await upsertTeamsCatalog(result.teams);
-    await remapIncorrectTeamIds();
+    await syncWorldCupTeamsCatalog(result.teams);
 
     return NextResponse.json({
       synced: result.teams.length,

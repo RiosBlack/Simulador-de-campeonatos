@@ -1,4 +1,4 @@
-import { WORLD_CUP_2026_SUPPLEMENT_TEAMS } from "@/_data/world-cup-2026-supplement";
+import { WORLD_CUP_2026_TEAMS } from "@/_data/world-cup-2026-teams";
 import { localizeApiFootballTeams } from "@/_utils/team-display";
 
 const BASE =
@@ -44,15 +44,13 @@ function getHeaders(): HeadersInit {
 function mapTeamResponse(
   data: ApiFootballTeamsResponse,
 ): ApiFootballTeam[] {
-  return localizeApiFootballTeams(
-    data.response.map((item) => ({
-      id: item.team.id,
-      name: item.team.name,
-      code: item.team.code,
-      country: item.team.country,
-      logoUrl: item.team.logo,
-    })),
-  );
+  return data.response.map((item) => ({
+    id: item.team.id,
+    name: item.team.name,
+    code: item.team.code,
+    country: item.team.country,
+    logoUrl: item.team.logo,
+  }));
 }
 
 async function fetchTeamsForSeason(
@@ -81,108 +79,56 @@ async function fetchTeamsForSeason(
   return { teams: mapTeamResponse(data) };
 }
 
-function mergeTeams(
-  primary: ApiFootballTeam[],
-  extra: ApiFootballTeam[],
-): ApiFootballTeam[] {
-  const byId = new Map<number, ApiFootballTeam>();
-  for (const team of primary) {
-    byId.set(team.id, team);
-  }
-  for (const team of extra) {
-    if (!byId.has(team.id)) {
-      byId.set(team.id, team);
-    }
-  }
-  return [...byId.values()];
-}
+function enrichFromApi(apiTeams: ApiFootballTeam[]): ApiFootballTeam[] {
+  const byId = new Map(apiTeams.map((t) => [t.id, t]));
 
-function supplementTo48(teams: ApiFootballTeam[]): {
-  teams: ApiFootballTeam[];
-  supplemented: boolean;
-  warning?: string;
-} {
-  if (teams.length >= 48) {
-    return { teams: teams.slice(0, 48), supplemented: false };
-  }
-
-  const merged = localizeApiFootballTeams(
-    mergeTeams(teams, WORLD_CUP_2026_SUPPLEMENT_TEAMS),
-  ).slice(0, 48);
-  const supplemented = merged.length > teams.length;
-
-  if (merged.length < 48) {
-    return {
-      teams: merged,
-      supplemented,
-      warning: `Apenas ${merged.length} seleções disponíveis após complemento.`,
-    };
-  }
-
-  return {
-    teams: merged,
-    supplemented,
-    warning: supplemented
-      ? "Plano da API não retornou 48 seleções de 2026; lista completada com seleções nacionais adicionais."
-      : undefined,
-  };
+  return localizeApiFootballTeams(
+    WORLD_CUP_2026_TEAMS.map((canonical) => {
+      const fromApi = byId.get(canonical.id);
+      if (!fromApi) return canonical;
+      return {
+        ...canonical,
+        logoUrl: fromApi.logoUrl || canonical.logoUrl,
+        code: fromApi.code ?? canonical.code,
+      };
+    }),
+  );
 }
 
 /**
- * Busca seleções da Copa (league=1). Prefere a temporada com mais times (ideal 48 em 2026).
- * Se o plano free só liberar 2022 (32), complementa com seleções extras até 48.
+ * Retorna as 48 seleções oficiais da Copa 2026.
+ * Enriquece logos/códigos com a API quando disponível (sem alterar a lista).
  */
 export async function fetchWorldCupTeams(
   preferredSeason = 2026,
   leagueId = 1,
 ): Promise<FetchWorldCupTeamsResult> {
-  const seasons = [
-    preferredSeason,
-    preferredSeason - 2,
-    preferredSeason - 4,
-    2022,
-    2018,
-  ].filter((s, i, arr) => arr.indexOf(s) === i);
+  const seasons = [preferredSeason, 2022].filter(
+    (s, i, arr) => arr.indexOf(s) === i,
+  );
 
-  let bestTeams: ApiFootballTeam[] = [];
+  let apiTeams: ApiFootballTeam[] = [];
   let bestSeason: number | null = null;
-  let lastPlanError: string | undefined;
 
   for (const season of seasons) {
     const { teams, errors } = await fetchTeamsForSeason(season, leagueId);
-
-    if (errors?.plan) {
-      lastPlanError = errors.plan;
-    }
-
-    const isBetter =
-      teams.length > bestTeams.length ||
-      (teams.length === bestTeams.length && season === preferredSeason);
-
-    if (isBetter && teams.length > 0) {
-      bestTeams = teams;
+    if (teams.length > 0 && !errors?.plan) {
+      apiTeams = teams;
       bestSeason = season;
-    }
-
-    if (bestTeams.length >= 48) {
       break;
     }
   }
 
-  if (bestTeams.length < 32) {
-    const hint = lastPlanError
-      ? ` ${lastPlanError}`
-      : " Verifique o plano da API-Football (temporada 2026 exige plano pago).";
-    throw new Error(`Nenhuma seleção suficiente retornada pela API.${hint}`);
-  }
-
-  const { teams, supplemented, warning } = supplementTo48(bestTeams);
+  const teams = enrichFromApi(apiTeams);
 
   return {
     teams,
     season: bestSeason,
-    supplemented,
-    warning,
+    supplemented: false,
+    warning:
+      apiTeams.length === 0
+        ? "API indisponível; catálogo gravado com dados locais da Copa 2026."
+        : undefined,
   };
 }
 
