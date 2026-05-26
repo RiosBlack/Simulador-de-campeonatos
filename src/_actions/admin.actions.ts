@@ -4,7 +4,11 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import prisma from "@/_lib/prisma";
 import { requireAdmin } from "@/_lib/session";
-import { auth } from "@/_lib/auth";
+import {
+  completeCredentialSetup,
+  createCredentialToken,
+  createPendingUser,
+} from "@/_services/user-credential-token.service";
 import { createChampionship, startGroupPhase } from "@/_services/championship.service";
 import {
   assignOwnersBulk,
@@ -19,10 +23,20 @@ import type { CardType } from "@/generated/prisma/client";
 
 const createUserSchema = z.object({
   name: z.string().min(2).max(100),
-  email: z.string().email(),
-  password: z.string().min(8).max(128),
   role: z.enum(["ADMIN", "MEMBER"]),
 });
+
+const completeAccountSetupSchema = z
+  .object({
+    token: z.string().min(1),
+    email: z.string().email(),
+    password: z.string().min(8).max(128),
+    confirmPassword: z.string().min(8).max(128),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "As senhas não coincidem.",
+    path: ["confirmPassword"],
+  });
 
 const GROUP_LETTERS_32 = ["A", "B", "C", "D", "E", "F", "G", "H"] as const;
 const GROUP_LETTERS_48 = [
@@ -143,8 +157,6 @@ export async function createUserAction(formData: FormData) {
 
   const parsed = createUserSchema.safeParse({
     name: formData.get("name"),
-    email: formData.get("email"),
-    password: formData.get("password"),
     role: formData.get("role"),
   });
 
@@ -152,32 +164,64 @@ export async function createUserAction(formData: FormData) {
     return { error: "Dados inválidos." };
   }
 
-  const existing = await prisma.user.findUnique({
-    where: { email: parsed.data.email },
-  });
-
-  if (existing) {
-    return { error: "E-mail já cadastrado." };
-  }
-
   try {
-    await auth.api.signUpEmail({
-      body: {
-        email: parsed.data.email,
-        password: parsed.data.password,
-        name: parsed.data.name,
-      },
-    });
-
-    await prisma.user.update({
-      where: { email: parsed.data.email },
-      data: { role: parsed.data.role },
+    const { setupUrl } = await createPendingUser({
+      name: parsed.data.name,
+      role: parsed.data.role,
     });
 
     revalidatePath("/admin/users");
-    return { success: true };
+    return { success: true, setupUrl };
   } catch {
     return { error: "Não foi possível criar o usuário." };
+  }
+}
+
+export async function regenerateCredentialLinkAction(userId: string) {
+  await requireAdmin();
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    return { error: "Usuário não encontrado." };
+  }
+
+  try {
+    const purpose = user.credentialSetupComplete
+      ? ("CREDENTIAL_UPDATE" as const)
+      : ("INITIAL_SETUP" as const);
+
+    const { setupUrl } = await createCredentialToken(userId, purpose);
+    revalidatePath("/admin/users");
+    return { success: true, setupUrl };
+  } catch {
+    return { error: "Não foi possível gerar o link." };
+  }
+}
+
+export async function completeAccountSetupAction(formData: FormData) {
+  const parsed = completeAccountSetupSchema.safeParse({
+    token: formData.get("token"),
+    email: formData.get("email"),
+    password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+
+  if (!parsed.success) {
+    const firstIssue = parsed.error.issues[0]?.message;
+    return { error: firstIssue ?? "Dados inválidos." };
+  }
+
+  try {
+    const result = await completeCredentialSetup(parsed.data.token, {
+      email: parsed.data.email,
+      password: parsed.data.password,
+    });
+
+    return { success: true, email: result.email };
+  } catch (e) {
+    return {
+      error: e instanceof Error ? e.message : "Não foi possível salvar o cadastro.",
+    };
   }
 }
 

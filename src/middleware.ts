@@ -5,6 +5,7 @@ const protectedPaths = ["/profile", "/admin"];
 function isPublicPath(pathname: string) {
   if (pathname === "/") return true;
   if (pathname.startsWith("/login")) return true;
+  if (pathname.startsWith("/cadastro")) return true;
   if (pathname.startsWith("/championships")) return true;
   if (pathname.startsWith("/api/auth")) return true;
   return false;

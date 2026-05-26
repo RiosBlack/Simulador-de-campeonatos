@@ -12,6 +12,11 @@ enum UserRole {
   MEMBER
 }
 
+enum CredentialTokenPurpose {
+  INITIAL_SETUP
+  CREDENTIAL_UPDATE
+}
+
 enum SelectionMode {
   DRAW
   MANUAL
@@ -42,23 +47,38 @@ enum CardType {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String
-  email         String    @unique
-  emailVerified Boolean   @default(false)
-  image         String?
-  role          UserRole  @default(MEMBER)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                        String    @id @default(cuid())
+  name                      String
+  email                     String    @unique
+  emailVerified             Boolean   @default(false)
+  image                     String?
+  role                      UserRole  @default(MEMBER)
+  credentialSetupComplete   Boolean   @default(false)
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
 
-  sessions     Session[]
-  accounts     Account[]
-  participants ChampionshipParticipant[]
-  ownedTeams   ChampionshipTeam[]
-  createdChamps Championship[] @relation("ChampionshipCreator")
-  homeStandIns Match[] @relation("HomeStandIn")
-  awayStandIns Match[] @relation("AwayStandIn")
+  sessions            Session[]
+  accounts            Account[]
+  credentialTokens    UserCredentialToken[]
+  participants        ChampionshipParticipant[]
+  ownedTeams          ChampionshipTeam[]
+  createdChamps       Championship[] @relation("ChampionshipCreator")
+  homeStandIns        Match[] @relation("HomeStandIn")
+  awayStandIns        Match[] @relation("AwayStandIn")
   ownerConflictMatches Match[] @relation("OwnerConflict")
+}
+
+model UserCredentialToken {
+  id        String                 @id @default(cuid())
+  tokenHash String                 @unique
+  userId    String
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose   CredentialTokenPurpose
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime               @default(now())
+
+  @@index([userId, usedAt])
 }
 
 model Session {

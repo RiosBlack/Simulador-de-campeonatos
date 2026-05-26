@@ -28,10 +28,12 @@ Simulador da Copa do Mundo 2026 onde cada participante recebe seleções (1 por 
 
 ## Autenticação
 
-- Signup público desabilitado na UI; admin cria via `createUserAction`
+- Signup público desabilitado; admin cria usuário com **nome + função** via `createUserAction` e recebe link de convite
+- Convite: `/cadastro/[token]` — usuário define e-mail e senha; link válido **24h** ou até o primeiro uso
+- Admin pode gerar novo link em `/admin/users` (`regenerateCredentialLinkAction`) para cadastro inicial ou troca de credenciais
 - Roles: `ADMIN` | `MEMBER`
 - `/` — home pública (lista copas; visitante abre campeonato e vê jogos/tabelas)
-- `/login` — entrada; `/profile` e `/admin/*` exigem sessão
+- `/login` — entrada; `/cadastro/*` — setup de credenciais (público); `/profile` e `/admin/*` exigem sessão
 - Rotas `/admin/*` protegidas por `requireAdmin()` no layout
 - Sessão: Better Auth cookie `better-auth.session_token`
 
@@ -77,6 +79,7 @@ pnpm dev
 
 ## Changelog
 
+- [2026-05-26-user-credential-invite](changelogs/2026-05-26-user-credential-invite.md) — convite por link para e-mail/senha; admin só nome + função
 - [2026-05-26-hydration-html-suppress](changelogs/2026-05-26-hydration-html-suppress.md) — `suppressHydrationWarning` no layout raiz (extensões do navegador)
 - [2026-05-26-world-cup-2026-official-teams](changelogs/2026-05-26-world-cup-2026-official-teams.md) — catálogo fixo com as 48 seleções oficiais da Copa 2026
 - [2026-05-26-team-names-pt-br-logos](changelogs/2026-05-26-team-names-pt-br-logos.md) — nomes das seleções em PT-BR; logos corrigidos (Argélia, Chile, Panamá)

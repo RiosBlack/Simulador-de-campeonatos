@@ -5,7 +5,9 @@ import { Card } from "@/_components/ui/Card";
 import { Badge } from "@/_components/ui/Badge";
 import { PageEntrance } from "@/_components/anim/PageEntrance";
 import { CreateUserForm } from "@/_components/admin/CreateUserForm";
+import { RegenerateCredentialLinkButton } from "@/_components/admin/RegenerateCredentialLinkButton";
 import { ToggleRoleButton } from "@/_components/admin/ToggleRoleButton";
+import { isPendingEmail } from "@/_services/user-credential-token.service";
 
 export default async function AdminUsersPage() {
   await requireAdmin();
@@ -43,13 +45,24 @@ export default async function AdminUsersPage() {
               </div>
               <div>
                 <p className="font-medium">{user.name}</p>
-                <p className="text-sm text-muted">{user.email}</p>
+                {!user.credentialSetupComplete || isPendingEmail(user.email) ? (
+                  <p className="text-sm text-muted">Cadastro pendente</p>
+                ) : (
+                  <p className="text-sm text-muted">{user.email}</p>
+                )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {!user.credentialSetupComplete && (
+                <Badge variant="muted">Pendente</Badge>
+              )}
               <Badge variant={user.role === "ADMIN" ? "live" : "muted"}>
                 {user.role}
               </Badge>
+              <RegenerateCredentialLinkButton
+                userId={user.id}
+                credentialSetupComplete={user.credentialSetupComplete}
+              />
               <ToggleRoleButton userId={user.id} currentRole={user.role} />
             </div>
           </Card>
