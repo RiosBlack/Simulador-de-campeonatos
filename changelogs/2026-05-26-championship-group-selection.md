@@ -26,6 +26,8 @@
 - Criação da copa gera 6 jogos por grupo (turno único) na mesma transação de grupos/times.
 - `ensureGroupStageMatches` recria jogos de grupos em copas antigas ao abrir `/admin/.../matches`.
 - Tela de jogos agrupa por letra do grupo; atualização preserva cartões já lançados.
+- Tabelas da fase de grupos destacam em verde as seleções classificadas no momento (1º/2º + melhores 3ºs).
+- Chave do mata-mata exibe o nome do participante (dono da seleção ou stand-in em verde).
 
 ## Correções (404)
 

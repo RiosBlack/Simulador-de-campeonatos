@@ -4,9 +4,10 @@ import type { StandingRow } from "@/_services/standings.service";
 type GroupTableProps = {
   letter: string;
   rows: StandingRow[];
+  qualifiedTeamIds: Set<number>;
 };
 
-export function GroupTable({ letter, rows }: GroupTableProps) {
+export function GroupTable({ letter, rows, qualifiedTeamIds }: GroupTableProps) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[320px] text-sm">
@@ -20,12 +21,20 @@ export function GroupTable({ letter, rows }: GroupTableProps) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
+          {rows.map((row) => {
+            const qualified = qualifiedTeamIds.has(row.teamId);
+            return (
             <tr
               key={row.teamId}
-              className="border-b border-border/50 last:border-0"
+              className={
+                qualified
+                  ? "border-b border-accent/25 bg-accent/12 last:border-0"
+                  : "border-b border-border/50 last:border-0"
+              }
             >
-              <td className="py-2.5 pr-2 font-bold text-accent">
+              <td
+                className={`py-2.5 pr-2 font-bold ${qualified ? "text-accent-dim" : "text-accent"}`}
+              >
                 {row.position}
               </td>
               <td className="py-2.5">
@@ -57,7 +66,8 @@ export function GroupTable({ letter, rows }: GroupTableProps) {
                 {row.goalDifference}
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
       <p className="mt-2 text-xs text-muted">Grupo {letter}</p>

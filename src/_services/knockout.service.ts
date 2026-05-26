@@ -1,9 +1,7 @@
 import prisma from "@/_lib/prisma";
 import {
   calculateGroupStandings,
-  rankThirdPlaces,
-  type StandingRow,
-  type ThirdPlaceCandidate,
+  getCurrentQualifiedTeamIds,
 } from "@/_services/standings.service";
 import type { MatchStage } from "@/generated/prisma/client";
 
@@ -72,65 +70,38 @@ export async function getQualifiedTeams(
     },
   });
 
-  const firstAndSecond: QualifiedTeam[] = [];
-  const thirds: ThirdPlaceCandidate[] = [];
+  const seed = championship.tieBreakSeed ?? Math.random();
+  const groupInputs = championship.groups.map((group) => ({
+    letter: group.letter,
+    teams: group.teams.map((t) => ({
+      teamId: t.teamId,
+      teamName: t.team.name,
+      logoUrl: t.team.logoUrl,
+      ownerUserId: t.ownerUserId,
+      ownerName: t.owner?.name ?? null,
+    })),
+    matches: group.matches,
+  }));
+
+  const qualifiedIds = getCurrentQualifiedTeamIds(groupInputs, seed);
+  const result: QualifiedTeam[] = [];
 
   for (const group of championship.groups) {
-    const standings = calculateGroupStandings(
-      group.teams.map((t) => ({
-        teamId: t.teamId,
-        teamName: t.team.name,
-        logoUrl: t.team.logoUrl,
-        ownerUserId: t.ownerUserId,
-        ownerName: t.owner?.name ?? null,
-      })),
-      group.matches,
-      championship.tieBreakSeed ?? Math.random(),
-    );
+    const input = groupInputs.find((g) => g.letter === group.letter)!;
+    const standings = calculateGroupStandings(input.teams, input.matches, seed);
 
-    const first = standings[0];
-    const second = standings[1];
-    const third = standings[2];
-
-    if (first) {
-      firstAndSecond.push({
-        teamId: first.teamId,
+    for (const row of standings) {
+      if (!qualifiedIds.has(row.teamId)) continue;
+      result.push({
+        teamId: row.teamId,
         groupLetter: group.letter,
-        position: 1,
-        ownerUserId: first.ownerUserId,
+        position: row.position,
+        ownerUserId: row.ownerUserId,
       });
-    }
-    if (second) {
-      firstAndSecond.push({
-        teamId: second.teamId,
-        groupLetter: group.letter,
-        position: 2,
-        ownerUserId: second.ownerUserId,
-      });
-    }
-    if (third) {
-      thirds.push({ ...third, groupLetter: group.letter });
     }
   }
 
-  const bestThirdsCount = Math.max(0, 32 - firstAndSecond.length);
-  const bestThirds =
-    bestThirdsCount > 0
-      ? rankThirdPlaces(thirds, championship.tieBreakSeed ?? Math.random()).slice(
-          0,
-          bestThirdsCount,
-        )
-      : [];
-
-  return [
-    ...firstAndSecond,
-    ...bestThirds.map((t) => ({
-      teamId: t.teamId,
-      groupLetter: t.groupLetter,
-      position: 3,
-      ownerUserId: t.ownerUserId,
-    })),
-  ];
+  return result;
 }
 
 export async function generateInitialKnockout(championshipId: string) {

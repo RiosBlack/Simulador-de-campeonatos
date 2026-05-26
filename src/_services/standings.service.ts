@@ -224,3 +224,45 @@ export function rankThirdPlaces(
     return randomB - randomA;
   });
 }
+
+export type GroupStandingsInput = {
+  letter: string;
+  teams: TeamMeta[];
+  matches: MatchWithEvents[];
+};
+
+/** IDs das seleções classificadas no momento (mesma regra do mata-mata). */
+export function getCurrentQualifiedTeamIds(
+  groups: GroupStandingsInput[],
+  tieBreakSeed = Math.random(),
+): Set<number> {
+  const firstAndSecond: number[] = [];
+  const thirds: ThirdPlaceCandidate[] = [];
+
+  for (const group of groups) {
+    const standings = calculateGroupStandings(
+      group.teams,
+      group.matches,
+      tieBreakSeed,
+    );
+
+    const first = standings[0];
+    const second = standings[1];
+    const third = standings[2];
+
+    if (first) firstAndSecond.push(first.teamId);
+    if (second) firstAndSecond.push(second.teamId);
+    if (third) thirds.push({ ...third, groupLetter: group.letter });
+  }
+
+  const bestThirdsCount = Math.max(0, 32 - firstAndSecond.length);
+  const bestThirds =
+    bestThirdsCount > 0
+      ? rankThirdPlaces(thirds, tieBreakSeed).slice(0, bestThirdsCount)
+      : [];
+
+  return new Set([
+    ...firstAndSecond,
+    ...bestThirds.map((t) => t.teamId),
+  ]);
+}

@@ -16,8 +16,10 @@ export type BracketMatch = {
   homeScore?: number | null;
   awayScore?: number | null;
   played: boolean;
-  homeStandIn?: string | null;
-  awayStandIn?: string | null;
+  homeParticipant?: string | null;
+  homeParticipantIsStandIn?: boolean;
+  awayParticipant?: string | null;
+  awayParticipantIsStandIn?: boolean;
 };
 
 type BracketTreeProps = {
@@ -74,17 +76,19 @@ export function BracketTree({ matches }: BracketTreeProps) {
                 <MatchRow
                   name={match.homeName}
                   logo={match.homeLogo}
+                  participant={match.homeParticipant}
+                  participantIsStandIn={match.homeParticipantIsStandIn}
                   score={match.homeScore}
                   played={match.played}
-                  standIn={match.homeStandIn}
                 />
                 <div className="my-1 text-center text-xs text-muted">vs</div>
                 <MatchRow
                   name={match.awayName}
                   logo={match.awayLogo}
+                  participant={match.awayParticipant}
+                  participantIsStandIn={match.awayParticipantIsStandIn}
                   score={match.awayScore}
                   played={match.played}
-                  standIn={match.awayStandIn}
                 />
               </Card>
             ))}
@@ -98,15 +102,17 @@ export function BracketTree({ matches }: BracketTreeProps) {
 function MatchRow({
   name,
   logo,
+  participant,
+  participantIsStandIn,
   score,
   played,
-  standIn,
 }: {
   name: string;
   logo: string;
+  participant?: string | null;
+  participantIsStandIn?: boolean;
   score?: number | null;
   played: boolean;
-  standIn?: string | null;
 }) {
   return (
     <div className="flex items-center justify-between gap-2">
@@ -114,8 +120,12 @@ function MatchRow({
         <Image src={logo} alt="" width={24} height={24} unoptimized />
         <div>
           <p className="text-sm font-medium">{name}</p>
-          {standIn && (
-            <p className="text-[10px] text-accent">Stand-in ativo</p>
+          {participant && (
+            <p
+              className={`text-xs ${participantIsStandIn ? "text-accent" : "text-muted"}`}
+            >
+              {participantIsStandIn ? `Stand-in: ${participant}` : participant}
+            </p>
           )}
         </div>
       </div>
