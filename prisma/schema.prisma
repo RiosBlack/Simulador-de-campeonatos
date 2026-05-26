@@ -58,6 +58,7 @@ model User {
   createdChamps Championship[] @relation("ChampionshipCreator")
   homeStandIns Match[] @relation("HomeStandIn")
   awayStandIns Match[] @relation("AwayStandIn")
+  ownerConflictMatches Match[] @relation("OwnerConflict")
 }
 
 model Session {
@@ -180,10 +181,13 @@ model Match {
   scheduledAt       DateTime?
   homeStandInUserId String?
   awayStandInUserId String?
+  ownerConflictUserId String?
+  ownerContinuesTeamId Int?
   championship      Championship @relation(fields: [championshipId], references: [id], onDelete: Cascade)
   group             Group?       @relation(fields: [groupId], references: [id])
   homeStandIn       User?        @relation("HomeStandIn", fields: [homeStandInUserId], references: [id])
   awayStandIn       User?        @relation("AwayStandIn", fields: [awayStandInUserId], references: [id])
+  ownerConflict     User?        @relation("OwnerConflict", fields: [ownerConflictUserId], references: [id])
   events            MatchEvent[]
 
   @@index([championshipId, stage])

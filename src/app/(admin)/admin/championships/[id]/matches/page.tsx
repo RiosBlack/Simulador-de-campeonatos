@@ -8,6 +8,7 @@ import { MatchResultForm } from "@/_components/admin/MatchResultForm";
 import { ensureGroupStageMatches } from "@/_services/team-assignment.service";
 import { stageLabel } from "@/_utils/format";
 import { countMatchCards } from "@/_utils/match-events";
+import { isOwnerConflictPending } from "@/_services/knockout.service";
 import { Card } from "@/_components/ui/Card";
 import { Badge } from "@/_components/ui/Badge";
 
@@ -31,6 +32,8 @@ type MatchRow = {
   yellowAway: number;
   redHome: number;
   redAway: number;
+  ownerConflictPending: boolean;
+  ownerConflictName: string | null;
 };
 
 export default async function AdminMatchesPage({ params }: Props) {
@@ -67,6 +70,22 @@ export default async function AdminMatchesPage({ params }: Props) {
   const teams = await prisma.team.findMany({ where: { id: { in: teamIds } } });
   const teamById = Object.fromEntries(teams.map((t) => [t.id, t]));
 
+  const conflictOwnerIds = [
+    ...new Set(
+      championship.matches
+        .filter((m) => isOwnerConflictPending(m))
+        .map((m) => m.ownerConflictUserId)
+        .filter((uid): uid is string => uid != null),
+    ),
+  ];
+  const conflictOwners =
+    conflictOwnerIds.length > 0
+      ? await prisma.user.findMany({ where: { id: { in: conflictOwnerIds } } })
+      : [];
+  const conflictOwnerNameById = Object.fromEntries(
+    conflictOwners.map((u) => [u.id, u.name]),
+  );
+
   const matchRows: MatchRow[] = championship.matches.map((m) => {
     const homeCards = countMatchCards(m.events, m.homeTeamId);
     const awayCards = countMatchCards(m.events, m.awayTeamId);
@@ -86,6 +105,10 @@ export default async function AdminMatchesPage({ params }: Props) {
       yellowAway: awayCards.yellow,
       redHome: homeCards.red,
       redAway: awayCards.red,
+      ownerConflictPending: isOwnerConflictPending(m),
+      ownerConflictName: m.ownerConflictUserId
+        ? (conflictOwnerNameById[m.ownerConflictUserId] ?? null)
+        : null,
     };
   });
 
@@ -252,19 +275,27 @@ function MatchCard({
             )}
         </div>
       </div>
-      <MatchResultForm
-        matchId={match.id}
-        mode={mode}
-        isKnockout={match.stage !== "GROUP"}
-        defaultHome={match.homeScore ?? 0}
-        defaultAway={match.awayScore ?? 0}
-        defaultHomePen={match.homeScorePen ?? 0}
-        defaultAwayPen={match.awayScorePen ?? 0}
-        defaultYellowHome={match.yellowHome}
-        defaultYellowAway={match.yellowAway}
-        defaultRedHome={match.redHome}
-        defaultRedAway={match.redAway}
-      />
+      {match.ownerConflictPending ? (
+        <p className="text-sm text-amber-200/90">
+          Aguardando{" "}
+          <strong>{match.ownerConflictName ?? "o participante"}</strong> escolher
+          qual seleção segue neste confronto do mata-mata.
+        </p>
+      ) : (
+        <MatchResultForm
+          matchId={match.id}
+          mode={mode}
+          isKnockout={match.stage !== "GROUP"}
+          defaultHome={match.homeScore ?? 0}
+          defaultAway={match.awayScore ?? 0}
+          defaultHomePen={match.homeScorePen ?? 0}
+          defaultAwayPen={match.awayScorePen ?? 0}
+          defaultYellowHome={match.yellowHome}
+          defaultYellowAway={match.yellowAway}
+          defaultRedHome={match.redHome}
+          defaultRedAway={match.redAway}
+        />
+      )}
     </Card>
   );
 }

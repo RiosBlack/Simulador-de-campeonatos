@@ -12,6 +12,11 @@ type QualifiedTeam = {
   ownerUserId: string | null;
 };
 
+type MatchConflictFields = {
+  ownerConflictUserId: string | null;
+  ownerContinuesTeamId: number | null;
+};
+
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -37,22 +42,70 @@ async function pickStandIn(
   return picked.userId;
 }
 
-async function resolveOwnersConflict(
-  championshipId: string,
+export function isOwnerConflictPending(match: MatchConflictFields): boolean {
+  return (
+    match.ownerConflictUserId != null && match.ownerContinuesTeamId == null
+  );
+}
+
+function detectOwnerConflict(
   homeOwnerId: string | null,
   awayOwnerId: string | null,
-): Promise<{ homeStandIn?: string; awayStandIn?: string }> {
+): string | null {
   if (!homeOwnerId || !awayOwnerId || homeOwnerId !== awayOwnerId) {
-    return {};
+    return null;
+  }
+  return homeOwnerId;
+}
+
+export function assertMatchReadyForResult(match: MatchConflictFields): void {
+  if (isOwnerConflictPending(match)) {
+    throw new Error(
+      "Aguarde o participante escolher qual seleção segue no confronto antes de registrar o resultado.",
+    );
+  }
+}
+
+export async function resolveKnockoutOwnerConflict(
+  matchId: string,
+  chosenTeamId: number,
+  userId: string,
+) {
+  const match = await prisma.match.findUniqueOrThrow({ where: { id: matchId } });
+
+  if (!match.ownerConflictUserId || match.ownerConflictUserId !== userId) {
+    throw new Error("Você não pode resolver este confronto.");
   }
 
-  const standIn = await pickStandIn(championshipId, homeOwnerId);
-  const assignToHome = Math.random() < 0.5;
-
-  if (assignToHome) {
-    return { homeStandIn: standIn };
+  if (!isOwnerConflictPending(match)) {
+    throw new Error("Este confronto já foi resolvido.");
   }
-  return { awayStandIn: standIn };
+
+  if (
+    chosenTeamId !== match.homeTeamId &&
+    chosenTeamId !== match.awayTeamId
+  ) {
+    throw new Error("Seleção inválida para este confronto.");
+  }
+
+  const standInUserId = await pickStandIn(match.championshipId, userId);
+
+  const data =
+    chosenTeamId === match.homeTeamId
+      ? {
+          ownerContinuesTeamId: chosenTeamId,
+          awayStandInUserId: standInUserId,
+        }
+      : {
+          ownerContinuesTeamId: chosenTeamId,
+          homeStandInUserId: standInUserId,
+        };
+
+  return prisma.match.update({
+    where: { id: matchId },
+    data,
+    include: { homeStandIn: true, awayStandIn: true },
+  });
 }
 
 export async function getQualifiedTeams(
@@ -124,8 +177,7 @@ export async function generateInitialKnockout(championshipId: string) {
   await prisma.$transaction(async (tx) => {
     let slot = 0;
     for (const [home, away] of pairs) {
-      const conflict = await resolveOwnersConflict(
-        championshipId,
+      const ownerConflictUserId = detectOwnerConflict(
         home.ownerUserId,
         away.ownerUserId,
       );
@@ -137,8 +189,7 @@ export async function generateInitialKnockout(championshipId: string) {
           bracketSlot: slot++,
           homeTeamId: home.teamId,
           awayTeamId: away.teamId,
-          homeStandInUserId: conflict.homeStandIn,
-          awayStandInUserId: conflict.awayStandIn,
+          ownerConflictUserId,
         },
       });
     }
@@ -197,8 +248,7 @@ export async function advanceKnockoutRound(
 
   let slot = 0;
   for (const [home, away] of pairs) {
-    const conflict = await resolveOwnersConflict(
-      championshipId,
+    const ownerConflictUserId = detectOwnerConflict(
       home.ownerUserId,
       away.ownerUserId,
     );
@@ -210,8 +260,7 @@ export async function advanceKnockoutRound(
         bracketSlot: slot++,
         homeTeamId: home.teamId,
         awayTeamId: away.teamId,
-        homeStandInUserId: conflict.homeStandIn,
-        awayStandInUserId: conflict.awayStandIn,
+        ownerConflictUserId,
       },
     });
   }

@@ -2,7 +2,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSession } from "@/_lib/session";
 import { getChampionshipForView } from "@/_services/championship.service";
+import { isOwnerConflictPending } from "@/_services/knockout.service";
 import { BracketTree } from "@/_components/championship/BracketTree";
+import {
+  KnockoutConflictResolver,
+  type OwnerKnockoutConflict,
+} from "@/_components/championship/KnockoutConflictResolver";
+import {
+  KnockoutConflictWaiting,
+  type WaitingKnockoutConflict,
+} from "@/_components/championship/KnockoutConflictWaiting";
 import { PageEntrance } from "@/_components/anim/PageEntrance";
 import prisma from "@/_lib/prisma";
 
@@ -22,22 +31,33 @@ export default async function KnockoutPage({ params }: Props) {
     ...new Set(
       koMatches.flatMap((m) =>
         [m.homeStandInUserId, m.awayStandInUserId].filter(
-          (id): id is string => id != null,
+          (uid): uid is string => uid != null,
         ),
       ),
     ),
   ];
+  const conflictOwnerIds = [
+    ...new Set(
+      koMatches
+        .map((m) => m.ownerConflictUserId)
+        .filter((uid): uid is string => uid != null),
+    ),
+  ];
 
-  const [teams, championshipTeams, standInUsers] = await Promise.all([
-    prisma.team.findMany({ where: { id: { in: teamIds } } }),
-    prisma.championshipTeam.findMany({
-      where: { championshipId: id, teamId: { in: teamIds } },
-      include: { owner: true },
-    }),
-    standInIds.length > 0
-      ? prisma.user.findMany({ where: { id: { in: standInIds } } })
-      : Promise.resolve([]),
-  ]);
+  const [teams, championshipTeams, standInUsers, conflictOwners] =
+    await Promise.all([
+      prisma.team.findMany({ where: { id: { in: teamIds } } }),
+      prisma.championshipTeam.findMany({
+        where: { championshipId: id, teamId: { in: teamIds } },
+        include: { owner: true },
+      }),
+      standInIds.length > 0
+        ? prisma.user.findMany({ where: { id: { in: standInIds } } })
+        : Promise.resolve([]),
+      conflictOwnerIds.length > 0
+        ? prisma.user.findMany({ where: { id: { in: conflictOwnerIds } } })
+        : Promise.resolve([]),
+    ]);
 
   const teamById = Object.fromEntries(teams.map((t) => [t.id, t]));
   const ownerNameByTeamId = new Map(
@@ -46,11 +66,18 @@ export default async function KnockoutPage({ params }: Props) {
   const standInNameById = Object.fromEntries(
     standInUsers.map((u) => [u.id, u.name]),
   );
+  const conflictOwnerNameById = Object.fromEntries(
+    conflictOwners.map((u) => [u.id, u.name]),
+  );
 
   function participantForSide(
     teamId: number,
     standInUserId: string | null,
+    pending: boolean,
   ): { name: string | null; isStandIn: boolean } {
+    if (pending) {
+      return { name: null, isStandIn: false };
+    }
     if (standInUserId) {
       return {
         name: standInNameById[standInUserId] ?? "Stand-in",
@@ -63,25 +90,66 @@ export default async function KnockoutPage({ params }: Props) {
     };
   }
 
+  const ownerConflicts: OwnerKnockoutConflict[] = [];
+  const waitingConflicts: WaitingKnockoutConflict[] = [];
+
   const bracketMatches = koMatches.map((m) => {
-    const homeParticipant = participantForSide(m.homeTeamId, m.homeStandInUserId);
-    const awayParticipant = participantForSide(m.awayTeamId, m.awayStandInUserId);
+    const pending = isOwnerConflictPending(m);
+    const home = teamById[m.homeTeamId];
+    const away = teamById[m.awayTeamId];
+
+    if (pending && m.ownerConflictUserId) {
+      const ownerName =
+        conflictOwnerNameById[m.ownerConflictUserId] ?? "Participante";
+      if (session?.user.id === m.ownerConflictUserId) {
+        ownerConflicts.push({
+          matchId: m.id,
+          stage: m.stage,
+          homeTeamId: m.homeTeamId,
+          awayTeamId: m.awayTeamId,
+          homeName: home?.name ?? "?",
+          awayName: away?.name ?? "?",
+          homeLogo: home?.logoUrl ?? "",
+          awayLogo: away?.logoUrl ?? "",
+        });
+      } else {
+        waitingConflicts.push({
+          matchId: m.id,
+          stage: m.stage,
+          homeName: home?.name ?? "?",
+          awayName: away?.name ?? "?",
+          ownerName,
+        });
+      }
+    }
+
+    const homeParticipant = participantForSide(
+      m.homeTeamId,
+      m.homeStandInUserId,
+      pending,
+    );
+    const awayParticipant = participantForSide(
+      m.awayTeamId,
+      m.awayStandInUserId,
+      pending,
+    );
 
     return {
-    id: m.id,
-    stage: m.stage,
-    homeName: teamById[m.homeTeamId]?.name ?? "?",
-    awayName: teamById[m.awayTeamId]?.name ?? "?",
-    homeLogo: teamById[m.homeTeamId]?.logoUrl ?? "",
-    awayLogo: teamById[m.awayTeamId]?.logoUrl ?? "",
-    homeParticipant: homeParticipant.name,
-    homeParticipantIsStandIn: homeParticipant.isStandIn,
-    awayParticipant: awayParticipant.name,
-    awayParticipantIsStandIn: awayParticipant.isStandIn,
-    homeScore: m.homeScore,
-    awayScore: m.awayScore,
-    played: m.played,
-  };
+      id: m.id,
+      stage: m.stage,
+      homeName: home?.name ?? "?",
+      awayName: away?.name ?? "?",
+      homeLogo: home?.logoUrl ?? "",
+      awayLogo: away?.logoUrl ?? "",
+      homeParticipant: homeParticipant.name,
+      homeParticipantIsStandIn: homeParticipant.isStandIn,
+      awayParticipant: awayParticipant.name,
+      awayParticipantIsStandIn: awayParticipant.isStandIn,
+      conflictPending: pending,
+      homeScore: m.homeScore,
+      awayScore: m.awayScore,
+      played: m.played,
+    };
   });
 
   return (
@@ -100,6 +168,9 @@ export default async function KnockoutPage({ params }: Props) {
             : "Oitavas → Quartas → Semi → Final"}
         </p>
       </div>
+
+      <KnockoutConflictResolver conflicts={ownerConflicts} />
+      <KnockoutConflictWaiting conflicts={waitingConflicts} />
 
       {bracketMatches.length === 0 ? (
         <p className="text-muted">

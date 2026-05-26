@@ -20,6 +20,7 @@ export type BracketMatch = {
   homeParticipantIsStandIn?: boolean;
   awayParticipant?: string | null;
   awayParticipantIsStandIn?: boolean;
+  conflictPending?: boolean;
 };
 
 type BracketTreeProps = {
@@ -73,11 +74,17 @@ export function BracketTree({ matches }: BracketTreeProps) {
             </h3>
             {stageMatches.map((match) => (
               <Card key={match.id} className="bracket-match p-3">
+                {match.conflictPending && (
+                  <p className="mb-2 text-center text-xs font-medium text-amber-200/90">
+                    Aguardando escolha do participante
+                  </p>
+                )}
                 <MatchRow
                   name={match.homeName}
                   logo={match.homeLogo}
                   participant={match.homeParticipant}
                   participantIsStandIn={match.homeParticipantIsStandIn}
+                  conflictPending={match.conflictPending}
                   score={match.homeScore}
                   played={match.played}
                 />
@@ -87,6 +94,7 @@ export function BracketTree({ matches }: BracketTreeProps) {
                   logo={match.awayLogo}
                   participant={match.awayParticipant}
                   participantIsStandIn={match.awayParticipantIsStandIn}
+                  conflictPending={match.conflictPending}
                   score={match.awayScore}
                   played={match.played}
                 />
@@ -104,6 +112,7 @@ function MatchRow({
   logo,
   participant,
   participantIsStandIn,
+  conflictPending,
   score,
   played,
 }: {
@@ -111,6 +120,7 @@ function MatchRow({
   logo: string;
   participant?: string | null;
   participantIsStandIn?: boolean;
+  conflictPending?: boolean;
   score?: number | null;
   played: boolean;
 }) {
@@ -120,12 +130,18 @@ function MatchRow({
         <Image src={logo} alt="" width={24} height={24} unoptimized />
         <div>
           <p className="text-sm font-medium">{name}</p>
-          {participant && (
-            <p
-              className={`text-xs ${participantIsStandIn ? "text-accent" : "text-muted"}`}
-            >
-              {participantIsStandIn ? `Stand-in: ${participant}` : participant}
-            </p>
+          {conflictPending ? (
+            <p className="text-xs text-amber-200/80">Aguardando escolha</p>
+          ) : (
+            participant && (
+              <p
+                className={`text-xs ${participantIsStandIn ? "text-accent" : "text-muted"}`}
+              >
+                {participantIsStandIn
+                  ? `Stand-in: ${participant}`
+                  : participant}
+              </p>
+            )
           )}
         </div>
       </div>

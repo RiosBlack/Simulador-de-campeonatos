@@ -11,7 +11,10 @@ import {
   assignTeamManually,
   runDrawAssignment,
 } from "@/_services/team-assignment.service";
-import { checkAndAdvanceAfterMatch } from "@/_services/knockout.service";
+import {
+  assertMatchReadyForResult,
+  checkAndAdvanceAfterMatch,
+} from "@/_services/knockout.service";
 import { upsertTeamsCatalog } from "@/_services/team-catalog.service";
 import type { CardType } from "@/generated/prisma/client";
 
@@ -415,6 +418,14 @@ async function saveMatchResultInternal(
 
   if (options.requirePlayed && !match.played) {
     return { error: "Este jogo ainda não foi registrado. Use Registrar." };
+  }
+
+  try {
+    assertMatchReadyForResult(match);
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Confronto ainda não está pronto.";
+    return { error: message };
   }
 
   await prisma.$transaction(async (tx) => {

@@ -21,7 +21,7 @@ Simulador da Copa do Mundo 2026 onde cada participante recebe seleções (1 por 
 
 1. **1 time por grupo por usuário** — constraint DB + validação em `team-assignment.service.ts`
 2. **Modos de atribuição**: `DRAW` (sorteio) ou `MANUAL` (admin escolhe)
-3. **Mata-mata**: se `home.owner === away.owner`, sorteia `standIn` entre outros participantes
+3. **Mata-mata**: se `home.owner === away.owner`, o dono escolhe qual seleção segue; stand-in sorteado automaticamente no outro time entre os demais participantes
 4. **Classificação**: 12×1º + 12×2º + 8 melhores 3ºs
 5. **Desempate**: pontos → saldo → gols pró → confronto direto → fair play → sorteio
 6. **Fair Play**: amarelo -1, 2º amarelo -3, vermelho direto -4, amarelo+vermelho -5
@@ -77,6 +77,7 @@ pnpm dev
 
 ## Changelog
 
+- [2026-05-26-knockout-standin-choice](changelogs/2026-05-26-knockout-standin-choice.md) — dono escolhe seleção no conflito; stand-in no outro time
 - [2026-05-26-championship-group-selection](changelogs/2026-05-26-championship-group-selection.md) — admin monta grupos e seleções ao criar copa
 - [2026-05-26-public-home](changelogs/2026-05-26-public-home.md) — home pública e login em `/login`
 - [2026-05-25-bootstrap](changelogs/2026-05-25-bootstrap.md) — implementação inicial
