@@ -14,6 +14,14 @@
 - Botão **Criar copa** só habilita quando todas as seleções tiverem dono (regra 1 por grupo).
 - Atribuições são salvas na criação via `assignOwnersBulk`.
 
+## Sync 48 seleções
+
+- `fetchWorldCupTeams` escolhe a temporada com **mais** times (não para na primeira com 32).
+- Se a API retornar só 32 (ex.: plano free + Copa 2022), completa até 48 com lista nacional em `src/_data/world-cup-2026-supplement.ts`.
+- Plano pago com `season=2026` continua usando os 48 times oficiais da API quando disponíveis.
+- Painel admin exibe aviso quando a lista foi complementada.
+- Sync grava times em lotes (`upsertTeamsCatalog`) para evitar timeout P2028 da transação Prisma (5s).
+
 ## Correções (404)
 
 - `/admin/championships/[id]` redireciona para `/admin/championships/[id]/teams` (rota índice inexistente gerava 404).

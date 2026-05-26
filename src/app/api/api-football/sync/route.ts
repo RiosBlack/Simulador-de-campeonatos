@@ -1,36 +1,20 @@
 import { NextResponse } from "next/server";
 import { fetchWorldCupTeams } from "@/_lib/api-football";
 import { requireAdmin } from "@/_lib/session";
-import prisma from "@/_lib/prisma";
+import { upsertTeamsCatalog } from "@/_services/team-catalog.service";
 
 export async function POST() {
   try {
     await requireAdmin();
-    const teams = await fetchWorldCupTeams(2026, 1);
+    const result = await fetchWorldCupTeams(2026, 1);
 
-    await prisma.$transaction(
-      teams.map((team) =>
-        prisma.team.upsert({
-          where: { id: team.id },
-          create: {
-            id: team.id,
-            name: team.name,
-            code: team.code,
-            country: team.country,
-            logoUrl: team.logoUrl,
-          },
-          update: {
-            name: team.name,
-            code: team.code,
-            country: team.country,
-            logoUrl: team.logoUrl,
-            syncedAt: new Date(),
-          },
-        }),
-      ),
-    );
+    await upsertTeamsCatalog(result.teams);
 
-    return NextResponse.json({ synced: teams.length });
+    return NextResponse.json({
+      synced: result.teams.length,
+      season: result.season,
+      warning: result.warning,
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Erro ao sincronizar";

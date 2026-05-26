@@ -12,6 +12,7 @@ import {
   runDrawAssignment,
 } from "@/_services/team-assignment.service";
 import { checkAndAdvanceAfterMatch } from "@/_services/knockout.service";
+import { upsertTeamsCatalog } from "@/_services/team-catalog.service";
 import type { CardType } from "@/generated/prisma/client";
 
 const createUserSchema = z.object({
@@ -452,18 +453,17 @@ export async function saveMatchResultAction(formData: FormData) {
 export async function syncTeamsAction() {
   await requireAdmin();
   const { fetchWorldCupTeams } = await import("@/_lib/api-football");
-  const teams = await fetchWorldCupTeams(2026, 1);
+  const result = await fetchWorldCupTeams(2026, 1);
 
-  await prisma.$transaction(
-    teams.map((team) =>
-      prisma.team.upsert({
-        where: { id: team.id },
-        create: team,
-        update: { ...team, syncedAt: new Date() },
-      }),
-    ),
-  );
+  await upsertTeamsCatalog(result.teams);
 
   revalidatePath("/admin/championships");
-  return { success: true, count: teams.length };
+  revalidatePath("/admin/championships/new");
+  revalidatePath("/admin");
+  return {
+    success: true,
+    count: result.teams.length,
+    season: result.season,
+    warning: result.warning,
+  };
 }
