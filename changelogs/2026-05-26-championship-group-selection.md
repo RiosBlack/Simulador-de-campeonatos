@@ -21,6 +21,11 @@
 - Plano pago com `season=2026` continua usando os 48 times oficiais da API quando disponíveis.
 - Painel admin exibe aviso quando a lista foi complementada.
 - Sync grava times em lotes (`upsertTeamsCatalog`) para evitar timeout P2028 da transação Prisma (5s).
+- Sorteio e atribuição em massa (`runDrawAssignment`, `assignOwnersBulk`) usam updates em lotes, sem transação única de 5s.
+- Lançar resultados: seções **Registrar** e **Atualizar**; actions `registerMatchResultAction` e `updateMatchResultAction`.
+- Criação da copa gera 6 jogos por grupo (turno único) na mesma transação de grupos/times.
+- `ensureGroupStageMatches` recria jogos de grupos em copas antigas ao abrir `/admin/.../matches`.
+- Tela de jogos agrupa por letra do grupo; atualização preserva cartões já lançados.
 
 ## Correções (404)
 

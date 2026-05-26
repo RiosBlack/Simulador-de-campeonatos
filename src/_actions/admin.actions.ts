@@ -316,6 +316,7 @@ export async function createChampionshipAction(formData: FormData) {
 
     revalidatePath("/admin/championships");
     revalidatePath(`/admin/championships/${championship.id}/teams`);
+    revalidatePath(`/admin/championships/${championship.id}/matches`);
     return { success: true, id: championship.id };
   } catch (e) {
     return {
@@ -384,9 +385,10 @@ function buildCardEvents(
   return events;
 }
 
-export async function saveMatchResultAction(formData: FormData) {
-  await requireAdmin();
-
+async function saveMatchResultInternal(
+  formData: FormData,
+  options: { requireUnplayed?: boolean; requirePlayed?: boolean },
+) {
   const parsed = matchResultSchema.safeParse({
     matchId: formData.get("matchId"),
     homeScore: formData.get("homeScore"),
@@ -406,6 +408,14 @@ export async function saveMatchResultAction(formData: FormData) {
   const match = await prisma.match.findUniqueOrThrow({
     where: { id: parsed.data.matchId },
   });
+
+  if (options.requireUnplayed && match.played) {
+    return { error: "Este jogo já tem resultado. Use Atualizar." };
+  }
+
+  if (options.requirePlayed && !match.played) {
+    return { error: "Este jogo ainda não foi registrado. Use Registrar." };
+  }
 
   await prisma.$transaction(async (tx) => {
     await tx.matchEvent.deleteMany({ where: { matchId: match.id } });
@@ -448,6 +458,16 @@ export async function saveMatchResultAction(formData: FormData) {
   revalidatePath(`/championships/${match.championshipId}/knockout`);
 
   return { success: true };
+}
+
+export async function registerMatchResultAction(formData: FormData) {
+  await requireAdmin();
+  return saveMatchResultInternal(formData, { requireUnplayed: true });
+}
+
+export async function updateMatchResultAction(formData: FormData) {
+  await requireAdmin();
+  return saveMatchResultInternal(formData, { requirePlayed: true });
 }
 
 export async function syncTeamsAction() {

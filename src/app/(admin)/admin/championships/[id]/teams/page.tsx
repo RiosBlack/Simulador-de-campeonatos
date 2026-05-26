@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/_lib/session";
 import prisma from "@/_lib/prisma";
 import { Card } from "@/_components/ui/Card";
+import { Button } from "@/_components/ui/Button";
 import { PageEntrance } from "@/_components/anim/PageEntrance";
 import { TeamsAssignmentPanel } from "@/_components/admin/TeamsAssignmentPanel";
 import { startGroupsAction } from "@/_actions/admin.actions";
@@ -42,9 +43,16 @@ export default async function AdminTeamsPage({ params }: Props) {
         ← Copas
       </Link>
       <h1 className="mt-2 mb-2 text-2xl font-bold">{championship.name}</h1>
-      <p className="mb-6 text-sm text-muted">
-        Modo: {championship.selectionMode} · {unassigned} times sem dono
-      </p>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted">
+          Modo: {championship.selectionMode} · {unassigned} times sem dono
+        </p>
+        <Link href={`/admin/championships/${id}/matches`}>
+          <Button variant="secondary" size="sm">
+            Lançar jogos
+          </Button>
+        </Link>
+      </div>
 
       <TeamsAssignmentPanel
         championshipId={id}

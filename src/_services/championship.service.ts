@@ -13,23 +13,28 @@ export async function createChampionship(input: {
   participantIds: string[];
   groupAssignments: GroupAssignmentInput[];
 }) {
-  const championship = await prisma.championship.create({
-    data: {
-      name: input.name,
-      season: input.season ?? 2026,
-      selectionMode: input.selectionMode,
-      status: "SETUP",
-      createdById: input.createdById,
-      participants: {
-        create: input.participantIds.map((userId) => ({ userId })),
+  const championship = await prisma.$transaction(async (tx) => {
+    const created = await tx.championship.create({
+      data: {
+        name: input.name,
+        season: input.season ?? 2026,
+        selectionMode: input.selectionMode,
+        status: "SETUP",
+        createdById: input.createdById,
+        participants: {
+          create: input.participantIds.map((userId) => ({ userId })),
+        },
       },
-    },
-  });
+    });
 
-  await initializeChampionshipStructure(
-    championship.id,
-    input.groupAssignments,
-  );
+    await initializeChampionshipStructure(
+      created.id,
+      input.groupAssignments,
+      tx,
+    );
+
+    return created;
+  });
 
   return prisma.championship.findUniqueOrThrow({
     where: { id: championship.id },
