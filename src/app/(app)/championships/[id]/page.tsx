@@ -57,6 +57,7 @@ export default async function ChampionshipPage({ params }: Props) {
       <nav className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           { href: `/championships/${id}/groups`, label: "Grupos", icon: "📋" },
+          { href: `/championships/${id}/matches`, label: "Jogos", icon: "⚽" },
           {
             href: `/championships/${id}/knockout`,
             label: "Mata-mata",

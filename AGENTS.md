@@ -79,6 +79,7 @@ pnpm dev
 
 ## Changelog
 
+- [2026-06-05-championship-matches-tab](changelogs/2026-06-05-championship-matches-tab.md) — aba pública de jogos (próximos e resultados) na copa
 - [2026-06-05-favicon-copa-do-mundo](changelogs/2026-06-05-favicon-copa-do-mundo.md) — favicon com troféu da Copa do Mundo
 - [2026-05-26-user-credential-invite](changelogs/2026-05-26-user-credential-invite.md) — convite por link para e-mail/senha; admin só nome + função
 - [2026-05-26-hydration-html-suppress](changelogs/2026-05-26-hydration-html-suppress.md) — `suppressHydrationWarning` no layout raiz (extensões do navegador)
