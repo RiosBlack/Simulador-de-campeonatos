@@ -1,5 +1,6 @@
 import type { CardType, Match } from "@/generated/prisma/client";
 import { calculateFairPlayScore } from "@/_services/fairplay.service";
+import { countMatchCards } from "@/_utils/match-events";
 
 export type StandingRow = {
   teamId: number;
@@ -16,6 +17,8 @@ export type StandingRow = {
   goalDifference: number;
   points: number;
   fairPlay: number;
+  yellowCards: number;
+  redCards: number;
   position: number;
 };
 
@@ -43,6 +46,8 @@ function initStats(meta: TeamMeta) {
     goalDifference: 0,
     points: 0,
     fairPlay: 0,
+    yellowCards: 0,
+    redCards: 0,
     position: 0,
   };
 }
@@ -90,6 +95,8 @@ function getHeadToHeadStats(
       goalDifference: 0,
       points: 0,
       fairPlay: 0,
+      yellowCards: 0,
+      redCards: 0,
       position: 0,
     });
   }
@@ -176,6 +183,13 @@ export function calculateGroupStandings(
 
     applyMatchResult(home, match.homeScore, match.awayScore);
     applyMatchResult(away, match.awayScore, match.homeScore);
+
+    const homeCards = countMatchCards(match.events, match.homeTeamId);
+    const awayCards = countMatchCards(match.events, match.awayTeamId);
+    home.yellowCards += homeCards.yellow;
+    home.redCards += homeCards.red;
+    away.yellowCards += awayCards.yellow;
+    away.redCards += awayCards.red;
 
     for (const event of match.events) {
       const target =

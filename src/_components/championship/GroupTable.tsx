@@ -10,7 +10,7 @@ type GroupTableProps = {
 export function GroupTable({ letter, rows, qualifiedTeamIds }: GroupTableProps) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[320px] text-sm">
+      <table className="w-full min-w-[380px] text-sm">
         <thead>
           <tr className="border-b border-border text-left text-xs text-muted">
             <th className="pb-2 pr-2">#</th>
@@ -18,6 +18,12 @@ export function GroupTable({ letter, rows, qualifiedTeamIds }: GroupTableProps) 
             <th className="pb-2 text-center">PJ</th>
             <th className="pb-2 text-center">Pts</th>
             <th className="pb-2 text-center">SG</th>
+            <th className="pb-2 text-center" title="Cartões amarelos">
+              Am
+            </th>
+            <th className="pb-2 text-center" title="Cartões vermelhos">
+              Vm
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -64,6 +70,12 @@ export function GroupTable({ letter, rows, qualifiedTeamIds }: GroupTableProps) 
               >
                 {row.goalDifference > 0 ? "+" : ""}
                 {row.goalDifference}
+              </td>
+              <td className="py-2.5 text-center tabular-nums text-yellow-400">
+                {row.yellowCards}
+              </td>
+              <td className="py-2.5 text-center tabular-nums text-red-400">
+                {row.redCards}
               </td>
             </tr>
             );
