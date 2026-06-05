@@ -1,4 +1,8 @@
 import Image from "next/image";
+import {
+  RedCardIcon,
+  YellowCardIcon,
+} from "@/_components/championship/CardCountDisplay";
 import type { StandingRow } from "@/_services/standings.service";
 
 type GroupTableProps = {
@@ -18,11 +22,15 @@ export function GroupTable({ letter, rows, qualifiedTeamIds }: GroupTableProps) 
             <th className="pb-2 text-center">PJ</th>
             <th className="pb-2 text-center">Pts</th>
             <th className="pb-2 text-center">SG</th>
-            <th className="pb-2 text-center" title="Cartões amarelos">
-              Am
+            <th className="pb-2 text-center">
+              <span className="inline-flex justify-center">
+                <YellowCardIcon />
+              </span>
             </th>
-            <th className="pb-2 text-center" title="Cartões vermelhos">
-              Vm
+            <th className="pb-2 text-center">
+              <span className="inline-flex justify-center">
+                <RedCardIcon />
+              </span>
             </th>
           </tr>
         </thead>
@@ -71,10 +79,10 @@ export function GroupTable({ letter, rows, qualifiedTeamIds }: GroupTableProps) 
                 {row.goalDifference > 0 ? "+" : ""}
                 {row.goalDifference}
               </td>
-              <td className="py-2.5 text-center tabular-nums text-yellow-400">
+              <td className="py-2.5 text-center tabular-nums">
                 {row.yellowCards}
               </td>
-              <td className="py-2.5 text-center tabular-nums text-red-400">
+              <td className="py-2.5 text-center tabular-nums">
                 {row.redCards}
               </td>
             </tr>

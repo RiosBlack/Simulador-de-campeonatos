@@ -2,7 +2,7 @@
 
 ## O que mudou
 
-- Colunas **Am** (amarelos) e **Vm** (vermelhos) nas tabelas da fase de grupos.
+- Colunas de cartões amarelos e vermelhos nas tabelas da fase de grupos (ícones em retângulo vertical arredondado).
 - Contagem agregada por seleção a partir dos eventos dos jogos disputados (`countMatchCards`).
 
 ## Arquivos

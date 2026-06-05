@@ -74,6 +74,7 @@ const championshipDetailInclude = {
   },
   participants: { include: { user: true } },
   matches: {
+    include: { events: true },
     orderBy: [{ stage: "asc" as const }, { bracketSlot: "asc" as const }],
   },
 };

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { Card } from "@/_components/ui/Card";
 import { Badge } from "@/_components/ui/Badge";
+import { CardCounts } from "@/_components/championship/CardCountDisplay";
 import { stageLabel } from "@/_utils/format";
 
 type MatchCardProps = {
@@ -14,6 +15,10 @@ type MatchCardProps = {
   awayScore?: number | null;
   homeScorePen?: number | null;
   awayScorePen?: number | null;
+  homeYellowCards?: number;
+  homeRedCards?: number;
+  awayYellowCards?: number;
+  awayRedCards?: number;
   stage: string;
   played: boolean;
   roundNumber?: number | null;
@@ -31,6 +36,10 @@ export function MatchCard({
   awayScore,
   homeScorePen,
   awayScorePen,
+  homeYellowCards,
+  homeRedCards,
+  awayYellowCards,
+  awayRedCards,
   stage,
   played,
   roundNumber,
@@ -68,6 +77,8 @@ export function MatchCard({
           name={homeName}
           playerName={homePlayerName}
           logo={homeLogo}
+          yellowCards={played ? homeYellowCards : undefined}
+          redCards={played ? homeRedCards : undefined}
         />
         <div className="text-center">
           <p className="text-2xl font-bold tabular-nums">
@@ -84,6 +95,8 @@ export function MatchCard({
           playerName={awayPlayerName}
           logo={awayLogo}
           align="right"
+          yellowCards={played ? awayYellowCards : undefined}
+          redCards={played ? awayRedCards : undefined}
         />
       </div>
     </Card>
@@ -94,11 +107,15 @@ function TeamSide({
   name,
   playerName,
   logo,
+  yellowCards,
+  redCards,
   align = "left",
 }: {
   name: string;
   playerName?: string | null;
   logo: string;
+  yellowCards?: number;
+  redCards?: number;
   align?: "left" | "right";
 }) {
   return (
@@ -119,6 +136,9 @@ function TeamSide({
           <span className="w-full truncate text-[10px] text-muted">
             {playerName}
           </span>
+        )}
+        {yellowCards != null && redCards != null && (
+          <CardCounts yellow={yellowCards} red={redCards} />
         )}
       </div>
     </div>

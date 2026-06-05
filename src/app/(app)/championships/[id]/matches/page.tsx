@@ -4,6 +4,7 @@ import { getSession } from "@/_lib/session";
 import prisma from "@/_lib/prisma";
 import { getChampionshipForView } from "@/_services/championship.service";
 import { isOwnerConflictPending } from "@/_services/knockout.service";
+import { countMatchCards } from "@/_utils/match-events";
 import {
   MatchList,
   type MatchListItem,
@@ -88,22 +89,35 @@ export default async function MatchesPage({ params }: Props) {
     return ownerNameByTeamId.get(teamId) ?? null;
   }
 
-  const matchItems: MatchListItem[] = championship.matches.map((m) => ({
-    id: m.id,
-    stage: m.stage,
-    played: m.played,
-    homeTeamId: m.homeTeamId,
-    awayTeamId: m.awayTeamId,
-    homeScore: m.homeScore,
-    awayScore: m.awayScore,
-    homeScorePen: m.homeScorePen,
-    awayScorePen: m.awayScorePen,
-    roundNumber: m.roundNumber,
-    groupLetter: groupLetterByMatchId.get(m.id) ?? null,
-    scheduledAt: m.scheduledAt,
-    homePlayerName: participantName(m, "home"),
-    awayPlayerName: participantName(m, "away"),
-  }));
+  const matchItems: MatchListItem[] = championship.matches.map((m) => {
+    const homeCards = m.played
+      ? countMatchCards(m.events, m.homeTeamId)
+      : { yellow: 0, red: 0 };
+    const awayCards = m.played
+      ? countMatchCards(m.events, m.awayTeamId)
+      : { yellow: 0, red: 0 };
+
+    return {
+      id: m.id,
+      stage: m.stage,
+      played: m.played,
+      homeTeamId: m.homeTeamId,
+      awayTeamId: m.awayTeamId,
+      homeScore: m.homeScore,
+      awayScore: m.awayScore,
+      homeScorePen: m.homeScorePen,
+      awayScorePen: m.awayScorePen,
+      roundNumber: m.roundNumber,
+      groupLetter: groupLetterByMatchId.get(m.id) ?? null,
+      scheduledAt: m.scheduledAt,
+      homePlayerName: participantName(m, "home"),
+      awayPlayerName: participantName(m, "away"),
+      homeYellowCards: homeCards.yellow,
+      homeRedCards: homeCards.red,
+      awayYellowCards: awayCards.yellow,
+      awayRedCards: awayCards.red,
+    };
+  });
 
   const upcoming = matchItems.filter((m) => !m.played).sort(sortMatches);
   const results = matchItems.filter((m) => m.played).sort(sortMatches);

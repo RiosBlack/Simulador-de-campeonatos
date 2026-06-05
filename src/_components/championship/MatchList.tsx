@@ -16,6 +16,10 @@ export type MatchListItem = {
   scheduledAt: Date | null;
   homePlayerName?: string | null;
   awayPlayerName?: string | null;
+  homeYellowCards?: number;
+  homeRedCards?: number;
+  awayYellowCards?: number;
+  awayRedCards?: number;
 };
 
 type TeamInfo = { name: string; logoUrl: string };
@@ -115,6 +119,10 @@ function MatchSection({
               awayScore={match.awayScore}
               homeScorePen={match.homeScorePen}
               awayScorePen={match.awayScorePen}
+              homeYellowCards={match.homeYellowCards}
+              homeRedCards={match.homeRedCards}
+              awayYellowCards={match.awayYellowCards}
+              awayRedCards={match.awayRedCards}
               stage={match.stage}
               played={match.played}
               roundNumber={match.roundNumber}
