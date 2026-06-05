@@ -10,6 +10,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Campeonato Resenha — Copa do Mundo",
   description: "Simulador da Copa do Mundo 2026 com resenha entre amigos",
+  icons: {
+    icon: "/copa-do-mundo.png",
+    shortcut: "/copa-do-mundo.png",
+    apple: "/copa-do-mundo.png",
+  },
 };
 
 export default function RootLayout({
