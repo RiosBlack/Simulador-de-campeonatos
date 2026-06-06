@@ -14,6 +14,8 @@ export function getAppBaseUrl(): string {
 export const trustedAppOrigins = [
   "http://localhost:3005",
   "http://127.0.0.1:3005",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
   process.env.BETTER_AUTH_URL,
   process.env.NEXT_PUBLIC_APP_URL,
 ].filter((value): value is string => Boolean(value));
