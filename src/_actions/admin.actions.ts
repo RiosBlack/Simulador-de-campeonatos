@@ -13,6 +13,7 @@ import { createChampionship, startGroupPhase } from "@/_services/championship.se
 import {
   assignOwnersBulk,
   assignTeamManually,
+  addTeamToChampionship,
   runDrawAssignment,
 } from "@/_services/team-assignment.service";
 import {
@@ -399,6 +400,48 @@ export async function assignTeamAction(
   } catch (e) {
     return {
       error: e instanceof Error ? e.message : "Erro na atribuição",
+    };
+  }
+}
+
+const addChampionshipTeamSchema = z.object({
+  championshipId: z.string().min(1),
+  groupId: z.string().min(1),
+  teamId: z.coerce.number().int().positive(),
+  ownerUserId: z.string().min(1),
+});
+
+export async function addChampionshipTeamAction(
+  championshipId: string,
+  groupId: string,
+  teamId: number,
+  ownerUserId: string,
+) {
+  await requireAdmin();
+
+  const parsed = addChampionshipTeamSchema.safeParse({
+    championshipId,
+    groupId,
+    teamId,
+    ownerUserId,
+  });
+
+  if (!parsed.success) {
+    return { error: "Dados inválidos." };
+  }
+
+  try {
+    const result = await addTeamToChampionship(parsed.data);
+    revalidatePath(`/admin/championships/${championshipId}/teams`);
+    revalidatePath(`/admin/championships/${championshipId}/matches`);
+    revalidatePath(`/championships/${championshipId}/matches`);
+    return {
+      success: true,
+      matchesCreated: result.matchesCreated,
+    };
+  } catch (e) {
+    return {
+      error: e instanceof Error ? e.message : "Erro ao adicionar seleção",
     };
   }
 }

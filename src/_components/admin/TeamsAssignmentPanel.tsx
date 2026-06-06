@@ -20,6 +20,8 @@ type GroupRow = {
   id: string;
   letter: string;
   teams: TeamRow[];
+  teamCount?: number;
+  hasPlayedMatches?: boolean;
 };
 
 type Props = {
@@ -88,6 +90,15 @@ export function TeamsAssignmentPanel({
         rows={manualRows}
         participants={participants}
         assignments={assignments}
+        groupMeta={Object.fromEntries(
+          groups.map((g) => [
+            g.letter,
+            {
+              teamCount: g.teamCount ?? g.teams.length,
+              hasPlayedMatches: g.hasPlayedMatches ?? false,
+            },
+          ]),
+        )}
         onAssign={(slotId, ownerUserId) => {
           if (!ownerUserId) return;
           startTransition(async () => {
@@ -108,16 +119,28 @@ export function TeamsAssignmentPanel({
 function GroupList({ groups }: { groups: GroupRow[] }) {
   return (
     <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {groups.map((g) => (
-        <div key={g.id} className="rounded-lg border border-border/50 p-3">
-          <p className="mb-2 font-bold">Grupo {g.letter}</p>
-          {g.teams.map((t) => (
-            <p key={t.id} className="text-xs text-muted">
-              {t.team.name} → {t.owner?.name ?? "—"}
-            </p>
-          ))}
-        </div>
-      ))}
+      {groups.map((g) => {
+        const count = g.teamCount ?? g.teams.length;
+        const blocked = g.hasPlayedMatches ?? false;
+        return (
+          <div key={g.id} className="rounded-lg border border-border/50 p-3">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <p className="font-bold">Grupo {g.letter}</p>
+              <span className="text-xs text-muted">{count}/4 seleções</span>
+              {blocked && (
+                <span className="rounded bg-amber-900/40 px-1.5 py-0.5 text-xs text-amber-200">
+                  Jogos lançados
+                </span>
+              )}
+            </div>
+            {g.teams.map((t) => (
+              <p key={t.id} className="text-xs text-muted">
+                {t.team.name} → {t.owner?.name ?? "—"}
+              </p>
+            ))}
+          </div>
+        );
+      })}
     </div>
   );
 }

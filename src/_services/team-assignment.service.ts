@@ -37,13 +37,217 @@ async function batchUpdateTeamOwners(
   }
 }
 
+function matchPairKey(a: number, b: number): string {
+  return a < b ? `${a}-${b}` : `${b}-${a}`;
+}
+
+type GroupMatchInput = {
+  championshipId: string;
+  stage: "GROUP";
+  groupId: string;
+  roundNumber: number;
+  homeTeamId: number;
+  awayTeamId: number;
+};
+
+export function buildMatchesForNewTeamInGroup(
+  championshipId: string,
+  groupId: string,
+  newTeamId: number,
+  existingTeamIds: number[],
+  startRoundNumber: number,
+): GroupMatchInput[] {
+  return existingTeamIds.map((existingId, index) => ({
+    championshipId,
+    stage: "GROUP" as const,
+    groupId,
+    roundNumber: startRoundNumber + index,
+    homeTeamId: newTeamId,
+    awayTeamId: existingId,
+  }));
+}
+
+function allUniquePairs(teamIds: number[]): Array<[number, number]> {
+  const pairs: Array<[number, number]> = [];
+  for (let i = 0; i < teamIds.length; i++) {
+    for (let j = i + 1; j < teamIds.length; j++) {
+      pairs.push([teamIds[i]!, teamIds[j]!]);
+    }
+  }
+  return pairs;
+}
+
+export async function createMissingGroupMatches(
+  championshipId: string,
+  groupId: string,
+  db: DbClient = prisma,
+): Promise<number> {
+  const groupTeams = await db.championshipTeam.findMany({
+    where: { championshipId, groupId },
+    orderBy: { teamId: "asc" },
+    select: { teamId: true },
+  });
+
+  if (groupTeams.length < 2) return 0;
+
+  const teamIds = groupTeams.map((t) => t.teamId);
+  const existingMatches = await db.match.findMany({
+    where: { championshipId, groupId, stage: "GROUP" },
+    select: { homeTeamId: true, awayTeamId: true, roundNumber: true },
+  });
+
+  const existingPairs = new Set(
+    existingMatches.map((m) => matchPairKey(m.homeTeamId, m.awayTeamId)),
+  );
+
+  const maxRound = existingMatches.reduce(
+    (max, m) => Math.max(max, m.roundNumber ?? 0),
+    0,
+  );
+
+  const missingPairs = allUniquePairs(teamIds).filter(
+    ([a, b]) => !existingPairs.has(matchPairKey(a, b)),
+  );
+
+  if (missingPairs.length === 0) return 0;
+
+  const newMatches: GroupMatchInput[] = missingPairs.map(([home, away], i) => ({
+    championshipId,
+    stage: "GROUP",
+    groupId,
+    roundNumber: maxRound + 1 + i,
+    homeTeamId: home,
+    awayTeamId: away,
+  }));
+
+  await db.match.createMany({ data: newMatches });
+  return newMatches.length;
+}
+
+export async function addTeamToChampionship(input: {
+  championshipId: string;
+  groupId: string;
+  teamId: number;
+  ownerUserId: string;
+}) {
+  return prisma.$transaction(async (tx) => {
+    const championship = await tx.championship.findUniqueOrThrow({
+      where: { id: input.championshipId },
+      include: {
+        groups: { include: { teams: true } },
+        teams: true,
+      },
+    });
+
+    if (!["SETUP", "GROUPS"].includes(championship.status)) {
+      throw new AssignmentError(
+        "Não é possível adicionar seleções após o mata-mata.",
+      );
+    }
+
+    const maxTeams = championship.groups.length * 4;
+    if (championship.teams.length >= maxTeams) {
+      throw new AssignmentError(
+        `A copa já atingiu o limite de ${maxTeams} seleções.`,
+      );
+    }
+
+    const group = championship.groups.find((g) => g.id === input.groupId);
+    if (!group) {
+      throw new AssignmentError("Grupo não encontrado nesta copa.");
+    }
+
+    if (group.teams.length >= 4) {
+      throw new AssignmentError(
+        `O grupo ${group.letter} já possui 4 seleções.`,
+      );
+    }
+
+    const playedInGroup = await tx.match.count({
+      where: { groupId: input.groupId, played: true },
+    });
+    if (playedInGroup > 0) {
+      throw new AssignmentError(
+        `O grupo ${group.letter} já possui jogos lançados — não é possível adicionar seleções.`,
+      );
+    }
+
+    const teamInChampionship = championship.teams.some(
+      (t) => t.teamId === input.teamId,
+    );
+    if (teamInChampionship) {
+      throw new AssignmentError("Esta seleção já está na copa.");
+    }
+
+    const teamExists = await tx.team.findUnique({
+      where: { id: input.teamId },
+    });
+    if (!teamExists) {
+      throw new AssignmentError("Seleção não encontrada no catálogo.");
+    }
+
+    const userExists = await tx.user.findUnique({
+      where: { id: input.ownerUserId },
+    });
+    if (!userExists) {
+      throw new AssignmentError("Usuário não encontrado.");
+    }
+
+    const ownerConflict = await tx.championshipTeam.findFirst({
+      where: {
+        championshipId: input.championshipId,
+        ownerUserId: input.ownerUserId,
+        groupId: input.groupId,
+      },
+    });
+    if (ownerConflict) {
+      throw new AssignmentError(
+        "Cada usuário só pode ter 1 time por grupo nesta copa.",
+      );
+    }
+
+    await tx.championshipParticipant.upsert({
+      where: {
+        championshipId_userId: {
+          championshipId: input.championshipId,
+          userId: input.ownerUserId,
+        },
+      },
+      create: {
+        championshipId: input.championshipId,
+        userId: input.ownerUserId,
+      },
+      update: {},
+    });
+
+    const created = await tx.championshipTeam.create({
+      data: {
+        championshipId: input.championshipId,
+        groupId: input.groupId,
+        teamId: input.teamId,
+        ownerUserId: input.ownerUserId,
+      },
+      include: { team: true, owner: true, group: true },
+    });
+
+    const matchesCreated = await createMissingGroupMatches(
+      input.championshipId,
+      input.groupId,
+      tx,
+    );
+
+    return { team: created, matchesCreated };
+  });
+}
+
 export async function validateOneTeamPerGroup(
   championshipId: string,
   userId: string,
   groupId: string,
   excludeChampionshipTeamId?: string,
+  db: DbClient = prisma,
 ) {
-  const existing = await prisma.championshipTeam.findFirst({
+  const existing = await db.championshipTeam.findFirst({
     where: {
       championshipId,
       ownerUserId: userId,

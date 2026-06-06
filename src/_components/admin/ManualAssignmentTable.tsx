@@ -11,10 +11,16 @@ export type ManualAssignmentRow = {
 
 type ParticipantOption = { id: string; name: string };
 
+type GroupMeta = {
+  teamCount: number;
+  hasPlayedMatches: boolean;
+};
+
 type Props = {
   rows: ManualAssignmentRow[];
   participants: ParticipantOption[];
   assignments: Record<string, string>;
+  groupMeta?: Record<string, GroupMeta>;
   onAssign: (slotId: string, ownerUserId: string) => void;
 };
 
@@ -22,6 +28,7 @@ export function ManualAssignmentTable({
   rows,
   participants,
   assignments,
+  groupMeta,
   onAssign,
 }: Props) {
   const byGroup = rows.reduce<Map<string, ManualAssignmentRow[]>>((map, row) => {
@@ -46,7 +53,21 @@ export function ManualAssignmentTable({
 
         return (
           <Card key={letter}>
-            <h3 className="mb-3 font-bold text-accent">Grupo {letter}</h3>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <h3 className="font-bold text-accent">Grupo {letter}</h3>
+              {groupMeta?.[letter] && (
+                <>
+                  <span className="text-xs text-muted">
+                    {groupMeta[letter].teamCount}/4 seleções
+                  </span>
+                  {groupMeta[letter].hasPlayedMatches && (
+                    <span className="rounded bg-amber-900/40 px-1.5 py-0.5 text-xs text-amber-200">
+                      Jogos lançados
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
             <div className="space-y-3">
               {groupRows.map((row) => {
                 const currentOwner = assignments[row.slotId] ?? "";

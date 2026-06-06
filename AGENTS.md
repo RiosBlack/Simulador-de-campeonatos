@@ -25,6 +25,7 @@ Simulador da Copa do Mundo 2026 onde cada participante recebe seleções (1 por 
 4. **Classificação**: 12×1º + 12×2º + 8 melhores 3ºs
 5. **Desempate**: pontos → saldo → gols pró → confronto direto → fair play → sorteio
 6. **Fair Play**: amarelo -1, 2º amarelo -3, vermelho direto -4, amarelo+vermelho -5
+7. **Completar copa incompleta**: admin adiciona seleção + jogador em grupo com vaga (< 4) e sem jogos lançados; cria só confrontos faltantes
 
 ## Autenticação
 
@@ -79,6 +80,7 @@ pnpm dev
 
 ## Changelog
 
+- [2026-06-06-add-team-mid-championship](changelogs/2026-06-06-add-team-mid-championship.md) — adicionar seleção e jogador para completar copas incompletas
 - [2026-06-05-group-standings-cards](changelogs/2026-06-05-group-standings-cards.md) — colunas de cartões amarelos e vermelhos nas tabelas de grupos
 - [2026-06-05-championship-matches-tab](changelogs/2026-06-05-championship-matches-tab.md) — aba pública de jogos (próximos e resultados) na copa
 - [2026-06-05-favicon-copa-do-mundo](changelogs/2026-06-05-favicon-copa-do-mundo.md) — favicon com troféu da Copa do Mundo
