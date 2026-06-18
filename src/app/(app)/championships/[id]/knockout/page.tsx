@@ -12,8 +12,15 @@ import {
   KnockoutConflictWaiting,
   type WaitingKnockoutConflict,
 } from "@/_components/championship/KnockoutConflictWaiting";
+import { KnockoutSimulateButton } from "@/_components/championship/KnockoutSimulateButton";
 import { PageEntrance } from "@/_components/anim/PageEntrance";
 import prisma from "@/_lib/prisma";
+import {
+  simulateR32Matches,
+} from "@/_services/knockout-simulation.service";
+import {
+  type GroupStandingsInput,
+} from "@/_services/standings.service";
 import {
   getBracketSlotDescriptor,
   inferFormatSize,
@@ -33,6 +40,32 @@ export default async function KnockoutPage({ params }: Props) {
   const koMatches = championship.matches.filter((m) => m.stage !== "GROUP");
   const formatSize = inferFormatSize(championship.groups.length);
   const includesR32 = formatSize === 48;
+  const tieBreakSeed = championship.tieBreakSeed ?? 1;
+  const groupInputs: GroupStandingsInput[] = championship.groups.map(
+    (group) => ({
+      letter: group.letter,
+      teams: group.teams.map((t) => ({
+        teamId: t.teamId,
+        teamName: t.team.name,
+        logoUrl: t.team.logoUrl,
+        ownerUserId: t.ownerUserId,
+        ownerName: t.owner?.name ?? null,
+      })),
+      matches: group.matches,
+    }),
+  );
+  const hasUnplayedGroupMatches = championship.matches.some(
+    (match) => match.stage === "GROUP" && !match.played,
+  );
+  const r32Defined = championship.matches.some((match) => match.stage === "R32");
+  const showSimulateButton =
+    includesR32 &&
+    championship.status === "GROUPS" &&
+    hasUnplayedGroupMatches &&
+    !r32Defined;
+  const simulatedR32Matches = showSimulateButton
+    ? simulateR32Matches(groupInputs, tieBreakSeed)
+    : [];
   const teamIds = [...new Set(koMatches.flatMap((m) => [m.homeTeamId, m.awayTeamId]))];
   const standInIds = [
     ...new Set(
@@ -235,7 +268,7 @@ export default async function KnockoutPage({ params }: Props) {
   }
 
   return (
-    <PageEntrance>
+    <>
       <div className="mb-6">
         <Link
           href={`/championships/${id}`}
@@ -244,12 +277,19 @@ export default async function KnockoutPage({ params }: Props) {
           ← Copa
         </Link>
         <h1 className="mt-2 text-2xl font-bold">Mata-mata</h1>
-        <p className="text-sm text-muted">
-          {includesR32
-            ? "16-avos → Oitavas → Quartas → Semi → Final"
-            : "Oitavas → Quartas → Semi → Final"}
-        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <p className="text-sm text-muted">
+            {includesR32
+              ? "16-avos → Oitavas → Quartas → Semi → Final"
+              : "Oitavas → Quartas → Semi → Final"}
+          </p>
+          {showSimulateButton && (
+            <KnockoutSimulateButton matches={simulatedR32Matches} />
+          )}
+        </div>
       </div>
+
+      <PageEntrance>
 
       <KnockoutConflictResolver conflicts={ownerConflicts} />
       <KnockoutConflictWaiting conflicts={waitingConflicts} />
@@ -262,6 +302,7 @@ export default async function KnockoutPage({ params }: Props) {
       ) : (
         <BracketTree matches={bracketMatches} />
       )}
-    </PageEntrance>
+      </PageEntrance>
+    </>
   );
 }
