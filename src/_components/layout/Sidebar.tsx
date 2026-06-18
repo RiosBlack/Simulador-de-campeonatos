@@ -25,7 +25,7 @@ export function Sidebar({ isAdmin, isLoggedIn }: SidebarProps) {
   const items = navItems.filter((item) => !item.requiresAuth || isLoggedIn);
 
   return (
-    <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-border lg:bg-surface/50 lg:backdrop-blur-xl">
+    <aside className="hidden lg:flex lg:w-50 lg:flex-col lg:border-r lg:border-border lg:bg-surface/50 lg:backdrop-blur-xl">
       <Link
         href="/"
         className="flex h-16 items-center gap-2 border-b border-border px-6"

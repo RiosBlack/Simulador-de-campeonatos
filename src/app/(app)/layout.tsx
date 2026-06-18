@@ -22,7 +22,7 @@ export default async function AppLayout({
     <div className="flex min-h-dvh">
       <Sidebar isAdmin={isAdmin} isLoggedIn={Boolean(session?.user)} />
       <div className="flex flex-1 flex-col pb-20 lg:pb-0">
-        <main className="flex-1 px-4 py-6 md:px-8 lg:px-10">
+        <main className="flex-1 px-4 py-6">
           <AppTopBar />
           {children}
         </main>

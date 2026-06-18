@@ -14,34 +14,34 @@ export default async function HomePage() {
 
   const myTeams = userId
     ? await prisma.championshipTeam.findMany({
-        where: { ownerUserId: userId },
-        include: { team: true, group: true, championship: true },
-        take: 8,
-      })
+      where: { ownerUserId: userId },
+      include: { team: true, group: true, championship: true },
+      take: 8,
+    })
     : [];
 
   const upcomingMatches = userId
     ? await prisma.match.findMany({
-        where: {
-          played: false,
-          championship: {
-            participants: { some: { userId } },
-          },
+      where: {
+        played: false,
+        championship: {
+          participants: { some: { userId } },
         },
-        take: 5,
-        orderBy: { scheduledAt: "asc" },
-      })
+      },
+      take: 5,
+      orderBy: { scheduledAt: "asc" },
+    })
     : [];
 
   const teamMap =
     upcomingMatches.length > 0
       ? await prisma.team.findMany({
-          where: {
-            id: {
-              in: upcomingMatches.flatMap((m) => [m.homeTeamId, m.awayTeamId]),
-            },
+        where: {
+          id: {
+            in: upcomingMatches.flatMap((m) => [m.homeTeamId, m.awayTeamId]),
           },
-        })
+        },
+      })
       : [];
   const teamById = Object.fromEntries(teamMap.map((t) => [t.id, t]));
 

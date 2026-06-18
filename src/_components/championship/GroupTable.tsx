@@ -13,12 +13,21 @@ type GroupTableProps = {
 
 export function GroupTable({ letter, rows, qualifiedTeamIds }: GroupTableProps) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[380px] text-sm">
+    <div className="min-w-0">
+      <table className="w-full table-fixed text-sm">
+        <colgroup>
+          <col className="w-7" />
+          <col />
+          <col className="w-7" />
+          <col className="w-8" />
+          <col className="w-8" />
+          <col className="w-7" />
+          <col className="w-7" />
+        </colgroup>
         <thead>
           <tr className="border-b border-border text-left text-xs text-muted">
-            <th className="pb-2 pr-2">#</th>
-            <th className="pb-2">Seleção</th>
+            <th className="pb-2 pr-1">#</th>
+            <th className="pb-2 pr-1">Seleção</th>
             <th className="pb-2 text-center">PJ</th>
             <th className="pb-2 text-center">Pts</th>
             <th className="pb-2 text-center">SG</th>
@@ -47,42 +56,46 @@ export function GroupTable({ letter, rows, qualifiedTeamIds }: GroupTableProps) 
               }
             >
               <td
-                className={`py-2.5 pr-2 font-bold ${qualified ? "text-accent-dim" : "text-accent"}`}
+                className={`py-2 pr-1 font-bold ${qualified ? "text-accent-dim" : "text-accent"}`}
               >
                 {row.position}
               </td>
-              <td className="py-2.5">
-                <div className="flex items-center gap-2">
+              <td className="min-w-0 py-2 pr-1">
+                <div className="flex min-w-0 items-center gap-1.5">
                   <Image
                     src={row.logoUrl}
                     alt=""
-                    width={24}
-                    height={24}
-                    className="h-6 w-6 object-contain"
+                    width={20}
+                    height={20}
+                    className="h-5 w-5 shrink-0 object-contain"
                     unoptimized
                   />
-                  <div>
-                    <p className="font-medium">{row.teamName}</p>
+                  <div className="min-w-0">
+                    <p className="truncate font-medium leading-tight">
+                      {row.teamName}
+                    </p>
                     {row.ownerName && (
-                      <p className="text-xs text-muted">{row.ownerName}</p>
+                      <p className="truncate text-xs text-muted leading-tight">
+                        {row.ownerName}
+                      </p>
                     )}
                   </div>
                 </div>
               </td>
-              <td className="py-2.5 text-center tabular-nums">{row.played}</td>
-              <td className="py-2.5 text-center font-bold tabular-nums">
+              <td className="py-2 text-center tabular-nums">{row.played}</td>
+              <td className="py-2 text-center font-bold tabular-nums">
                 {row.points}
               </td>
               <td
-                className={`py-2.5 text-center tabular-nums ${row.goalDifference >= 0 ? "text-accent" : "text-red-400"}`}
+                className={`py-2 text-center tabular-nums ${row.goalDifference >= 0 ? "text-accent" : "text-red-400"}`}
               >
                 {row.goalDifference > 0 ? "+" : ""}
                 {row.goalDifference}
               </td>
-              <td className="py-2.5 text-center tabular-nums">
+              <td className="py-2 text-center tabular-nums">
                 {row.yellowCards}
               </td>
-              <td className="py-2.5 text-center tabular-nums">
+              <td className="py-2 text-center tabular-nums">
                 {row.redCards}
               </td>
             </tr>

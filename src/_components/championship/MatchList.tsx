@@ -107,27 +107,30 @@ function MatchSection({
           if (!home || !away) return null;
 
           return (
-            <MatchCard
-              key={match.id}
-              homeName={home.name}
-              awayName={away.name}
-              homePlayerName={match.homePlayerName}
-              awayPlayerName={match.awayPlayerName}
-              homeLogo={home.logoUrl}
-              awayLogo={away.logoUrl}
-              homeScore={match.homeScore}
-              awayScore={match.awayScore}
-              homeScorePen={match.homeScorePen}
-              awayScorePen={match.awayScorePen}
-              homeYellowCards={match.homeYellowCards}
-              homeRedCards={match.homeRedCards}
-              awayYellowCards={match.awayYellowCards}
-              awayRedCards={match.awayRedCards}
-              stage={match.stage}
-              played={match.played}
-              roundNumber={match.roundNumber}
-              scheduledAt={match.scheduledAt}
-            />
+            <div key={match.id}>
+              {/* # ID do jogo */}
+              {/* <p className="mb-1 font-mono text-xs text-muted">{match.id}</p> */}
+              <MatchCard
+                homeName={home.name}
+                awayName={away.name}
+                homePlayerName={match.homePlayerName}
+                awayPlayerName={match.awayPlayerName}
+                homeLogo={home.logoUrl}
+                awayLogo={away.logoUrl}
+                homeScore={match.homeScore}
+                awayScore={match.awayScore}
+                homeScorePen={match.homeScorePen}
+                awayScorePen={match.awayScorePen}
+                homeYellowCards={match.homeYellowCards}
+                homeRedCards={match.homeRedCards}
+                awayYellowCards={match.awayYellowCards}
+                awayRedCards={match.awayRedCards}
+                stage={match.stage}
+                played={match.played}
+                roundNumber={match.roundNumber}
+                scheduledAt={match.scheduledAt}
+              />
+            </div>
           );
         })}
       </div>

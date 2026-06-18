@@ -71,7 +71,7 @@ export default async function GroupsPage({ params }: Props) {
           );
 
           return (
-            <Card key={group.id}>
+            <Card key={group.id} className="min-w-0">
               <GroupTable
                 letter={group.letter}
                 rows={standings}
