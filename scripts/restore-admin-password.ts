@@ -3,21 +3,20 @@ import { hashPassword } from "better-auth/crypto";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
+function requireEnv(name: string, value: string | undefined): string {
+  if (!value) {
+    console.error(`${name} não definida no .env`);
+    process.exit(1);
+  }
+  return value;
+}
+
 const email = process.env.ADMIN_EMAIL ?? "admin@copa.local";
-const password = process.env.ADMIN_PASSWORD;
-
-if (!process.env.DATABASE_URL) {
-  console.error("DATABASE_URL não definida no .env");
-  process.exit(1);
-}
-
-if (!password) {
-  console.error("ADMIN_PASSWORD não definida no .env");
-  process.exit(1);
-}
+const password = requireEnv("ADMIN_PASSWORD", process.env.ADMIN_PASSWORD);
+const databaseUrl = requireEnv("DATABASE_URL", process.env.DATABASE_URL);
 
 const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
+  adapter: new PrismaPg({ connectionString: databaseUrl }),
 });
 
 async function main() {
