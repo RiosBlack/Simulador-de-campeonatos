@@ -14,6 +14,12 @@ import {
 } from "@/_components/championship/KnockoutConflictWaiting";
 import { PageEntrance } from "@/_components/anim/PageEntrance";
 import prisma from "@/_lib/prisma";
+import {
+  getBracketSlotDescriptor,
+  inferFormatSize,
+  knockoutStagesForFormat,
+  slotsPerKnockoutStage,
+} from "@/_utils/knockout-bracket";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -25,7 +31,8 @@ export default async function KnockoutPage({ params }: Props) {
   if (!championship) notFound();
 
   const koMatches = championship.matches.filter((m) => m.stage !== "GROUP");
-  const hasR32 = koMatches.some((m) => m.stage === "R32");
+  const formatSize = inferFormatSize(championship.groups.length);
+  const includesR32 = formatSize === 48;
   const teamIds = [...new Set(koMatches.flatMap((m) => [m.homeTeamId, m.awayTeamId]))];
   const standInIds = [
     ...new Set(
@@ -155,13 +162,8 @@ export default async function KnockoutPage({ params }: Props) {
   });
 
   // Completa visualmente a chave até a final com jogos futuros (placeholders).
-  const stagesOrder = hasR32
-    ? (["R32", "R16", "QF", "SF", "FINAL"] as const)
-    : (["R16", "QF", "SF", "FINAL"] as const);
-
-  const slotsPerStage: Record<string, number> = hasR32
-    ? { R32: 16, R16: 8, QF: 4, SF: 2, FINAL: 1 }
-    : { R16: 8, QF: 4, SF: 2, FINAL: 1 };
+  const stagesOrder = knockoutStagesForFormat(formatSize);
+  const slotsPerStage = slotsPerKnockoutStage(formatSize);
 
   const matchByStageSlot = new Map<string, (typeof bracketMatches)[number]>();
   for (const m of bracketMatches) {
@@ -197,6 +199,12 @@ export default async function KnockoutPage({ params }: Props) {
         const labelB = matchLabelBySlot.get(`${prevStage}-${slotB}`);
         if (labelA) homeName = `Venc. ${labelA}`;
         if (labelB) awayName = `Venc. ${labelB}`;
+      }
+
+      const bracketDescriptor = getBracketSlotDescriptor(formatSize, stage, slot);
+      if (bracketDescriptor) {
+        if (homeName === "A definir") homeName = bracketDescriptor.home;
+        if (awayName === "A definir") awayName = bracketDescriptor.away;
       }
 
       // Registra o label deste placeholder (sem "Venc." para não cascatear)
@@ -237,7 +245,7 @@ export default async function KnockoutPage({ params }: Props) {
         </Link>
         <h1 className="mt-2 text-2xl font-bold">Mata-mata</h1>
         <p className="text-sm text-muted">
-          {hasR32
+          {includesR32
             ? "16-avos → Oitavas → Quartas → Semi → Final"
             : "Oitavas → Quartas → Semi → Final"}
         </p>
