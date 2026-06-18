@@ -71,7 +71,7 @@ export function BracketTree({ matches }: BracketTreeProps) {
         if (!stageMatches?.length) return null;
 
         return (
-          <div key={stage} className="flex min-w-[200px] flex-col gap-3">
+          <div key={stage} className="flex min-w-[350px] flex-col gap-3">
             <h3 className="text-center text-xs font-bold uppercase tracking-wider text-accent">
               {stageLabel(stage)}
             </h3>
@@ -79,33 +79,40 @@ export function BracketTree({ matches }: BracketTreeProps) {
               .slice()
               .sort((a, b) => (a.bracketSlot ?? 0) - (b.bracketSlot ?? 0))
               .map((match) => (
-              <Card key={match.id} className="bracket-match p-3">
-                {match.conflictPending && (
-                  <p className="mb-2 text-center text-xs font-medium text-amber-200/90">
-                    Aguardando escolha do participante
-                  </p>
-                )}
-                <MatchRow
-                  name={match.homeName}
-                  logo={match.homeLogo}
-                  participant={match.homeParticipant}
-                  participantIsStandIn={match.homeParticipantIsStandIn}
-                  conflictPending={match.conflictPending}
-                  score={match.homeScore}
-                  played={match.played}
-                />
-                <div className="my-1 text-center text-xs text-muted">vs</div>
-                <MatchRow
-                  name={match.awayName}
-                  logo={match.awayLogo}
-                  participant={match.awayParticipant}
-                  participantIsStandIn={match.awayParticipantIsStandIn}
-                  conflictPending={match.conflictPending}
-                  score={match.awayScore}
-                  played={match.played}
-                />
-              </Card>
-            ))}
+                <Card key={match.id} className="bracket-match p-3">
+                  {match.conflictPending && (
+                    <p className="mb-2 text-center text-xs font-medium text-amber-200/90">
+                      Aguardando escolha do participante
+                    </p>
+                  )}
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                    <MatchSide
+                      name={match.homeName}
+                      logo={match.homeLogo}
+                      participant={match.homeParticipant}
+                      participantIsStandIn={match.homeParticipantIsStandIn}
+                      conflictPending={match.conflictPending}
+                    />
+                    <div className="shrink-0 px-1 text-center">
+                      {match.played ? (
+                        <span className="text-sm font-bold tabular-nums">
+                          {match.homeScore ?? 0} - {match.awayScore ?? 0}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted">vs</span>
+                      )}
+                    </div>
+                    <MatchSide
+                      name={match.awayName}
+                      logo={match.awayLogo}
+                      participant={match.awayParticipant}
+                      participantIsStandIn={match.awayParticipantIsStandIn}
+                      conflictPending={match.conflictPending}
+                      align="right"
+                    />
+                  </div>
+                </Card>
+              ))}
           </div>
         );
       })}
@@ -113,53 +120,55 @@ export function BracketTree({ matches }: BracketTreeProps) {
   );
 }
 
-function MatchRow({
+function MatchSide({
   name,
   logo,
   participant,
   participantIsStandIn,
   conflictPending,
-  score,
-  played,
+  align = "left",
 }: {
   name: string;
   logo: string;
   participant?: string | null;
   participantIsStandIn?: boolean;
   conflictPending?: boolean;
-  score?: number | null;
-  played: boolean;
+  align?: "left" | "right";
 }) {
   return (
-    <div className="flex items-center justify-between gap-2">
-      <div className="flex items-center gap-2">
-        {logo ? (
-          <Image src={logo} alt="" width={24} height={24} unoptimized />
-        ) : (
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-border text-[10px] text-muted">
-            ?
-          </span>
-        )}
-        <div>
-          <p className="text-sm font-medium">{name}</p>
-          {conflictPending ? (
-            <p className="text-xs text-amber-200/80">Aguardando escolha</p>
-          ) : (
-            participant && (
-              <p
-                className={`text-xs ${participantIsStandIn ? "text-accent" : "text-muted"}`}
-              >
-                {participantIsStandIn
-                  ? `Stand-in: ${participant}`
-                  : participant}
-              </p>
-            )
-          )}
-        </div>
-      </div>
-      {played && (
-        <span className="text-lg font-bold tabular-nums">{score ?? 0}</span>
+    <div
+      className={`flex min-w-0 items-center gap-2 ${align === "right" ? "flex-row-reverse text-right" : ""}`}
+    >
+      {logo ? (
+        <Image
+          src={logo}
+          alt=""
+          width={24}
+          height={24}
+          className="h-6 w-6 shrink-0 object-contain"
+          unoptimized
+        />
+      ) : (
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-border text-[10px] text-muted">
+          ?
+        </span>
       )}
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium">{name}</p>
+        {conflictPending ? (
+          <p className="text-xs text-amber-200/80">Aguardando escolha</p>
+        ) : (
+          participant && (
+            <p
+              className={`truncate text-xs ${participantIsStandIn ? "text-accent" : "text-muted"}`}
+            >
+              {participantIsStandIn
+                ? `Stand-in: ${participant}`
+                : participant}
+            </p>
+          )
+        )}
+      </div>
     </div>
   );
 }

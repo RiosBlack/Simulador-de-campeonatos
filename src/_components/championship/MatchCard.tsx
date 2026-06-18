@@ -120,22 +120,20 @@ function TeamSide({
 }) {
   return (
     <div
-      className={`flex flex-1 flex-col items-center gap-2 ${align === "right" ? "text-right" : "text-left"}`}
+      className={`flex min-w-0 flex-1 items-center gap-2 ${align === "right" ? "flex-row-reverse text-right" : "text-left"}`}
     >
       <Image
         src={logo}
         alt={name}
         width={40}
         height={40}
-        className="h-10 w-10 object-contain"
+        className="h-10 w-10 shrink-0 object-contain"
         unoptimized
       />
-      <div className="flex max-w-[100px] flex-col items-center gap-0.5">
-        <span className="w-full truncate text-xs font-medium">{name}</span>
+      <div className="min-w-0 flex flex-col gap-0.5">
+        <span className="truncate text-xs font-medium">{name}</span>
         {playerName && (
-          <span className="w-full truncate text-[10px] text-muted">
-            {playerName}
-          </span>
+          <span className="truncate text-[10px] text-muted">{playerName}</span>
         )}
         {yellowCards != null && redCards != null && (
           <CardCounts yellow={yellowCards} red={redCards} />
