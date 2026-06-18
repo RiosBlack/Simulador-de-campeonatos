@@ -1,5 +1,6 @@
 import { WORLD_CUP_2026_TEAMS } from "@/_data/world-cup-2026-teams";
 import { localizeApiFootballTeams } from "@/_utils/team-display";
+import { localTeamLogoUrl } from "@/_utils/team-logo";
 
 const BASE =
   process.env.API_FOOTBALL_BASE ?? "https://v3.football.api-sports.io";
@@ -88,7 +89,7 @@ function enrichFromApi(apiTeams: ApiFootballTeam[]): ApiFootballTeam[] {
       if (!fromApi) return canonical;
       return {
         ...canonical,
-        logoUrl: fromApi.logoUrl || canonical.logoUrl,
+        logoUrl: localTeamLogoUrl(canonical.id),
         code: fromApi.code ?? canonical.code,
       };
     }),

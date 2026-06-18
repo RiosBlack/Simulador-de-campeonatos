@@ -1,5 +1,6 @@
 import prisma from "@/_lib/prisma";
 import type { ApiFootballTeam } from "@/_lib/api-football";
+import { withLocalTeamLogo } from "@/_utils/team-logo";
 
 const BATCH_SIZE = 12;
 const REMAP_TX_TIMEOUT_MS = 20_000;
@@ -13,12 +14,17 @@ const TEAM_ID_CORRECTIONS: Record<number, number> = {
   1533: 1568,
 };
 
+function normalizeTeamsForCatalog(teams: ApiFootballTeam[]): ApiFootballTeam[] {
+  return teams.map(withLocalTeamLogo);
+}
+
 /** Persiste o catálogo global de seleções (sem transação longa — evita timeout P2028). */
 export async function upsertTeamsCatalog(teams: ApiFootballTeam[]) {
   const syncedAt = new Date();
+  const normalized = normalizeTeamsForCatalog(teams);
 
-  for (let i = 0; i < teams.length; i += BATCH_SIZE) {
-    const batch = teams.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < normalized.length; i += BATCH_SIZE) {
+    const batch = normalized.slice(i, i + BATCH_SIZE);
     await Promise.all(
       batch.map((team) =>
         prisma.team.upsert({

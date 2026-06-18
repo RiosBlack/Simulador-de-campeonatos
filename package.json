@@ -21,6 +21,7 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:restore-admin-password": "tsx scripts/restore-admin-password.ts",
+    "logos:sync": "tsx scripts/sync-team-logos.ts",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate"
   },

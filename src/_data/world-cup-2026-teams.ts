@@ -1,6 +1,7 @@
 import type { ApiFootballTeam } from "@/_lib/api-football";
+import { localTeamLogoUrl } from "@/_utils/team-logo";
 
-const logo = (id: number) => `https://media.api-sports.io/football/teams/${id}.png`;
+const logo = localTeamLogoUrl;
 
 /**
  * 48 seleções da Copa do Mundo 2026 (12 grupos × 4), conforme sorteio oficial.
