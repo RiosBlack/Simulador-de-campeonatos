@@ -49,7 +49,7 @@ export default async function GroupsPage({ params }: Props) {
     getThirdPlaceStandings(groupInputs, tieBreakSeed);
 
   return (
-    <PageEntrance>
+    <PageEntrance className="min-w-0 max-w-full">
       <div className="mb-6">
         <Link
           href={`/championships/${id}`}
@@ -73,7 +73,7 @@ export default async function GroupsPage({ params }: Props) {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid min-w-0 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
         {championship.groups.map((group, index) => {
           const input = groupInputs[index]!;
           const standings = calculateGroupStandings(
@@ -83,7 +83,7 @@ export default async function GroupsPage({ params }: Props) {
           );
 
           return (
-            <Card key={group.id} className="min-w-0">
+            <Card key={group.id} className="min-w-0 overflow-hidden p-3 sm:p-4 md:p-6">
               <GroupTable
                 letter={group.letter}
                 rows={standings}
@@ -95,7 +95,7 @@ export default async function GroupsPage({ params }: Props) {
       </div>
 
       {thirdPlaces.length > 0 && (
-        <Card className="mt-6 min-w-0">
+        <Card className="mt-4 min-w-0 overflow-hidden p-3 sm:mt-6 sm:p-4 md:p-6">
           <ThirdPlaceTable
             rows={thirdPlaces}
             qualifyingCount={thirdPlaceQualifyingCount}
