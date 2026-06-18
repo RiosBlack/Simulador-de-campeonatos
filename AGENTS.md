@@ -80,6 +80,7 @@ pnpm dev
 
 ## Changelog
 
+- [2026-06-18-third-place-standings-table](changelogs/2026-06-18-third-place-standings-table.md) — tabela dos melhores 3º colocados na fase de grupos
 - [2026-06-06-add-team-mid-championship](changelogs/2026-06-06-add-team-mid-championship.md) — adicionar seleção e jogador para completar copas incompletas
 - [2026-06-05-group-standings-cards](changelogs/2026-06-05-group-standings-cards.md) — colunas de cartões amarelos e vermelhos nas tabelas de grupos
 - [2026-06-05-championship-matches-tab](changelogs/2026-06-05-championship-matches-tab.md) — aba pública de jogos (próximos e resultados) na copa

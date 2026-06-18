@@ -245,11 +245,14 @@ export type GroupStandingsInput = {
   matches: MatchWithEvents[];
 };
 
-/** IDs das seleções classificadas no momento (mesma regra do mata-mata). */
-export function getCurrentQualifiedTeamIds(
+export type RankedThirdPlace = ThirdPlaceCandidate & {
+  rankAmongThirds: number;
+};
+
+function collectStandingsByGroup(
   groups: GroupStandingsInput[],
-  tieBreakSeed = Math.random(),
-): Set<number> {
+  tieBreakSeed: number,
+) {
   const firstAndSecond: number[] = [];
   const thirds: ThirdPlaceCandidate[] = [];
 
@@ -269,6 +272,37 @@ export function getCurrentQualifiedTeamIds(
     if (third) thirds.push({ ...third, groupLetter: group.letter });
   }
 
+  return { firstAndSecond, thirds };
+}
+
+/** Ranking dos 3º colocados e quantos avançam (mesma regra do mata-mata). */
+export function getThirdPlaceStandings(
+  groups: GroupStandingsInput[],
+  tieBreakSeed = Math.random(),
+): { ranked: RankedThirdPlace[]; qualifyingCount: number } {
+  const { firstAndSecond, thirds } = collectStandingsByGroup(
+    groups,
+    tieBreakSeed,
+  );
+  const qualifyingCount = Math.max(0, 32 - firstAndSecond.length);
+
+  const ranked = rankThirdPlaces(thirds, tieBreakSeed).map((row, index) => ({
+    ...row,
+    rankAmongThirds: index + 1,
+  }));
+
+  return { ranked, qualifyingCount };
+}
+
+/** IDs das seleções classificadas no momento (mesma regra do mata-mata). */
+export function getCurrentQualifiedTeamIds(
+  groups: GroupStandingsInput[],
+  tieBreakSeed = Math.random(),
+): Set<number> {
+  const { firstAndSecond, thirds } = collectStandingsByGroup(
+    groups,
+    tieBreakSeed,
+  );
   const bestThirdsCount = Math.max(0, 32 - firstAndSecond.length);
   const bestThirds =
     bestThirdsCount > 0

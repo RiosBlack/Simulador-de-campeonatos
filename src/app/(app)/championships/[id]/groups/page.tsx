@@ -5,9 +5,11 @@ import { getChampionshipForView } from "@/_services/championship.service";
 import {
   calculateGroupStandings,
   getCurrentQualifiedTeamIds,
+  getThirdPlaceStandings,
   type GroupStandingsInput,
 } from "@/_services/standings.service";
 import { GroupTable } from "@/_components/championship/GroupTable";
+import { ThirdPlaceTable } from "@/_components/championship/ThirdPlaceTable";
 import { Card } from "@/_components/ui/Card";
 import { PageEntrance } from "@/_components/anim/PageEntrance";
 
@@ -43,6 +45,8 @@ export default async function GroupsPage({ params }: Props) {
     groupInputs,
     tieBreakSeed,
   );
+  const { ranked: thirdPlaces, qualifyingCount: thirdPlaceQualifyingCount } =
+    getThirdPlaceStandings(groupInputs, tieBreakSeed);
 
   return (
     <PageEntrance>
@@ -55,9 +59,17 @@ export default async function GroupsPage({ params }: Props) {
         </Link>
         <h1 className="mt-2 text-2xl font-bold">Fase de Grupos</h1>
         <p className="text-sm text-muted">{qualifierText}</p>
-        <p className="mt-2 flex items-center gap-2 text-xs text-muted">
-          <span className="inline-block h-3 w-6 rounded-sm bg-accent/30 ring-1 ring-accent/40" />
-          Classificados no momento
+        <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
+          <span className="flex items-center gap-2">
+            <span className="inline-block h-3 w-6 rounded-sm bg-accent/30 ring-1 ring-accent/40" />
+            1º e 2º colocados
+          </span>
+          {thirdPlaceQualifyingCount > 0 && (
+            <span className="flex items-center gap-2">
+              <span className="inline-block h-3 w-6 rounded-sm bg-emerald-500/30 ring-1 ring-emerald-500/40" />
+              Melhores 3º colocados
+            </span>
+          )}
         </p>
       </div>
 
@@ -81,6 +93,15 @@ export default async function GroupsPage({ params }: Props) {
           );
         })}
       </div>
+
+      {thirdPlaces.length > 0 && (
+        <Card className="mt-6 min-w-0">
+          <ThirdPlaceTable
+            rows={thirdPlaces}
+            qualifyingCount={thirdPlaceQualifyingCount}
+          />
+        </Card>
+      )}
     </PageEntrance>
   );
 }
